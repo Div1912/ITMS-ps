@@ -19,6 +19,26 @@ import {
 } from "recharts"
 
 export function ProfileVisualization() {
+
+   const CustomLegend = () => {
+  return (
+    <div className="flex items-center justify-center gap-6 py-2 text-xs text-gray-300">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-1 bg-cyan-400 rounded"></div>
+        Ideal Rail Profile
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-1 bg-purple-400 rounded"></div>
+        Rail Profile Captured by Outside Laser
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-1 bg-gray-400 rounded"></div>
+        Rail Profile Captured by Inside Laser
+      </div>
+    </div>
+  );
+};
+
   const [selectedProfile, setSelectedProfile] = useState("current")
   const [showGrid, setShowGrid] = useState(true)
   const [hoveredPoint, setHoveredPoint] = useState<any>(null)
@@ -206,8 +226,9 @@ export function ProfileVisualization() {
         </div>
 
         <div className="h-96 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg border border-border p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={railProfileData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+        <CustomLegend />
+          <ResponsiveContainer width="100%" height="90%">
+            <LineChart data={railProfileData} margin={{ top: 30, right: 30, left: 20, bottom: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={showGrid ? 0.3 : 0} />
               <XAxis
                 dataKey="x"
@@ -229,7 +250,9 @@ export function ProfileVisualization() {
                 }}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+            
+
+
 
               {/* Reference lines for rail sections */}
               <ReferenceLine y={-20} stroke="#4B5563" strokeDasharray="2 2" opacity={0.5} />

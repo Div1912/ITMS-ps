@@ -1,59 +1,82 @@
+"use client"
+
+import { useState, useEffect } from "react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from "lucide-react"
 
 export function ProfileMetrics() {
-  const metrics = [
+  const [metrics, setMetrics] = useState([
     {
       title: "Rail Head Width",
-      value: "68.2mm",
-      target: "70.0mm",
+      value: 68.2,
+      unit: "mm",
+      target: 70.0,
       deviation: -1.8,
       status: "warning",
       trend: "down",
     },
     {
       title: "Rail Height",
-      value: "172.8mm",
-      target: "173.0mm",
+      value: 172.8,
+       unit: "mm",
+      target: 173.0,
       deviation: -0.2,
       status: "good",
       trend: "stable",
     },
     {
       title: "Gauge Face Angle",
-      value: "68.5°",
-      target: "70.0°",
+      value: 68.5,
+       unit: "°",
+      target: 70.0,
       deviation: -1.5,
       status: "warning",
       trend: "down",
     },
     {
       title: "Web Thickness",
-      value: "16.2mm",
-      target: "16.5mm",
+      value: 16.2,
+       unit: "mm",
+      target: 16.5,
       deviation: -0.3,
       status: "good",
       trend: "stable",
     },
     {
       title: "Flange Width",
-      value: "150.1mm",
-      target: "150.0mm",
+      value: 150.1,
+       unit: "mm",
+      target: 150.0,
       deviation: 0.1,
       status: "good",
       trend: "up",
     },
     {
       title: "Overall Wear Index",
-      value: "23.4%",
-      target: "< 30%",
+      value: 23.4,
+      unit: "%",
+      target:  30,
       deviation: 0,
       status: "good",
       trend: "up",
     },
-  ]
+  ]);
+
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setMetrics(prev =>
+      prev.map(metric => ({
+        ...metric,
+        value: Number((metric.value + (Math.random() - 0.5) * 0.4).toFixed(2)),
+      }))
+    );
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -98,8 +121,8 @@ export function ProfileMetrics() {
 
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-foreground">{metric.value}</span>
-                  <span className="text-sm text-muted-foreground">/ {metric.target}</span>
+                  <span className="text-2xl font-bold ">{metric.value}{metric.unit}</span>
+                  <span className="text-sm text-muted-foreground">/ {metric.target}{metric.unit}</span>
                 </div>
 
                 <div className="flex items-center justify-between">

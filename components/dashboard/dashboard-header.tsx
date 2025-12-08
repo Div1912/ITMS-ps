@@ -26,8 +26,9 @@ export function DashboardHeader() {
   }, [])
 
   const handleLogout = () => {
+    localStorage.removeItem("system-start-time")
     localStorage.removeItem("itms-user")
-    router.push("/")
+        router.push("/")
   }
 
   return (

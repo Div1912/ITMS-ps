@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,43 +31,33 @@ const initialAlerts: GeometryAlert[] = [
     timestamp: new Date(Date.now() - 120000),
     acknowledged: false,
   },
-  {
-    id: "2",
-    type: "warning",
-    parameter: "Track Gauge",
-    value: 1438.5,
-    limit: 1438.0,
-    unit: "mm",
-    location: "KM 246.2",
-    timestamp: new Date(Date.now() - 300000),
-    acknowledged: false,
-  },
-  {
-    id: "3",
-    type: "warning",
-    parameter: "Vertical Deviation",
-    value: 3.8,
-    limit: 4.0,
-    unit: "mm",
-    location: "KM 247.1",
-    timestamp: new Date(Date.now() - 450000),
-    acknowledged: true,
-  },
-  {
-    id: "4",
-    type: "info",
-    parameter: "Cross Level",
-    value: 2.1,
-    limit: 3.0,
-    unit: "mm",
-    location: "KM 248.5",
-    timestamp: new Date(Date.now() - 600000),
-    acknowledged: false,
-  },
 ]
 
 export function GeometryAlerts() {
   const [alerts, setAlerts] = useState<GeometryAlert[]>(initialAlerts)
+
+  // 🔥 LIVE ALERT GENERATOR (every 5 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newAlert: GeometryAlert = {
+        id: Date.now().toString(),
+        type: Math.random() < 0.3 ? "critical" : Math.random() < 0.6 ? "warning" : "info",
+        parameter: ["Gauge", "Cross Level", "Twist", "Unevenness", "Lateral Deviation"][
+          Math.floor(Math.random() * 5)
+        ],
+        value: +(Math.random() * 8).toFixed(2),
+        limit: 5.0,
+        unit: "mm",
+        location: `KM ${(Math.random() * 300 + 200).toFixed(1)}`,
+        timestamp: new Date(),
+        acknowledged: false,
+      }
+
+      setAlerts((prev) => [newAlert, ...prev.slice(0, 9)])
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   const acknowledgeAlert = (id: string) => {
     setAlerts((prev) => prev.map((alert) => (alert.id === id ? { ...alert, acknowledged: true } : alert)))
@@ -79,42 +69,24 @@ export function GeometryAlerts() {
 
   const getAlertIcon = (type: GeometryAlert["type"]) => {
     switch (type) {
-      case "critical":
-        return <AlertTriangle className="w-4 h-4 text-red-400" />
-      case "warning":
-        return <AlertTriangle className="w-4 h-4 text-yellow-400" />
-      case "info":
-        return <Info className="w-4 h-4 text-blue-400" />
+      case "critical": return <AlertTriangle className="w-4 h-4 text-red-400" />
+      case "warning": return <AlertTriangle className="w-4 h-4 text-yellow-400" />
+      case "info": return <Info className="w-4 h-4 text-blue-400" />
     }
   }
 
   const getAlertBadge = (type: GeometryAlert["type"]) => {
     switch (type) {
-      case "critical":
-        return (
-          <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20">
-            Critical
-          </Badge>
-        )
-      case "warning":
-        return (
-          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
-            Warning
-          </Badge>
-        )
-      case "info":
-        return (
-          <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-            Info
-          </Badge>
-        )
+      case "critical": return <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20">Critical</Badge>
+      case "warning": return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">Warning</Badge>
+      case "info": return <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">Info</Badge>
     }
   }
 
   const unacknowledgedCount = alerts.filter((alert) => !alert.acknowledged).length
 
   return (
-    <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="border-border/50 bg-card/50 backdrop-blur-sm h-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -128,7 +100,8 @@ export function GeometryAlerts() {
           )}
         </div>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="h-full">
         <ScrollArea className="h-64">
           <div className="space-y-3">
             {alerts.map((alert) => (
@@ -141,16 +114,19 @@ export function GeometryAlerts() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 flex-1">
                     {getAlertIcon(alert.type)}
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-sm text-foreground">{alert.parameter}</h4>
+                        <h4 className="font-medium text-sm">{alert.parameter}</h4>
                         {getAlertBadge(alert.type)}
                       </div>
+
                       <p className="text-xs text-muted-foreground mb-2">
                         {alert.value.toFixed(1)}
                         {alert.unit} exceeds limit of {alert.limit.toFixed(1)}
                         {alert.unit}
                       </p>
+
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -160,26 +136,18 @@ export function GeometryAlerts() {
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1">
                     {!alert.acknowledged && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => acknowledgeAlert(alert.id)}
-                        className="h-6 px-2 text-xs"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => acknowledgeAlert(alert.id)} className="h-6 px-2 text-xs">
                         <CheckCircle className="w-3 h-3" />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => dismissAlert(alert.id)}
-                      className="h-6 px-2 text-xs"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => dismissAlert(alert.id)} className="h-6 px-2 text-xs">
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
+
                 </div>
               </div>
             ))}

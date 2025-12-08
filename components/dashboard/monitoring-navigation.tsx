@@ -17,7 +17,7 @@ import {
   Settings,
   RefreshCw,
 } from "lucide-react"
-import { useState } from "react"
+import { useState , useEffect } from "react"
 
 const monitoringSystems = [
   {
@@ -55,7 +55,7 @@ const monitoringSystems = [
   },
   {
     id: "ai-vision",
-    name: "AI Vision",
+    name: "Condition Monitoring",
     description: "Computer vision analysis",
     icon: Camera,
     status: "operational",
@@ -75,18 +75,73 @@ const monitoringSystems = [
     lastUpdate: "5 sec ago",
     dataPoints: "Active",
   },
+  {
+   id: "infigment detection",
+    name: "Infrigment Detection",
+    description: "High-definition video capture",
+    icon: Video,
+    status: "operational",
+    path: "/monitoring/infringement",
+    alerts: 0,
+    lastUpdate: "5 sec ago",
+    dataPoints: "Active",
+  },
 ]
 
 export function MonitoringNavigation() {
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
+  const [uptime, setUptime] = useState("00:00:00")
+
+ // startTime is the numeric timestamp (ms) when the system started
+  const [startTime, setStartTime] = useState<number | null>(null)
+
+  // initialize startTime from localStorage (or now if not present)
+  useEffect(() => {
+    const saved = localStorage.getItem("system-start-time")
+    const initialTime = saved ? Number(saved) : Date.now()
+
+    setStartTime(initialTime)
+    localStorage.setItem("system-start-time", initialTime.toString())
+  }, [])
+
+  // interval that updates uptime every second — depends on startTime
+  useEffect(() => {
+    if (startTime === null) return
+
+    const tick = () => {
+      const now = Date.now()
+      const diff = now - startTime
+
+      const totalSeconds = Math.floor(diff / 1000)
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0")
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0")
+      const seconds = String(totalSeconds % 60).padStart(2, "0")
+
+      setUptime(`${hours}:${minutes}:${seconds}`)
+    }
+
+    // immediate tick so UI doesn't wait 1s on start
+    tick()
+    const timer = setInterval(tick, 1000)
+
+    return () => clearInterval(timer)
+  }, [startTime])
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    // Simulate data refresh
+
+    // reset start time (both in localStorage and state) -> uptime resets immediately
+    const newTime = Date.now()
+    localStorage.setItem("system-start-time", newTime.toString())
+    setStartTime(newTime)
+
+    // simulate data refresh delay
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setRefreshing(false)
   }
+
+  
 
   const exportSystemStatus = (format: string) => {
     const data = {
@@ -160,7 +215,7 @@ export function MonitoringNavigation() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center p-3 rounded-lg border border-green-500/20 bg-green-500/10">
             <div className="text-xl font-bold text-green-400">
               {monitoringSystems.filter((s) => s.status === "operational").length}
@@ -173,12 +228,10 @@ export function MonitoringNavigation() {
             </div>
             <div className="text-sm text-muted-foreground">Active Alerts</div>
           </div>
-          <div className="text-center p-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
-            <div className="text-xl font-bold text-blue-400">5,142</div>
-            <div className="text-sm text-muted-foreground">Data Points/min</div>
-          </div>
+         
           <div className="text-center p-3 rounded-lg border border-purple-500/20 bg-purple-500/10">
-            <div className="text-xl font-bold text-purple-400">99.8%</div>
+            <div className="text-xl font-bold text-purple-400">{uptime}
+</div>
             <div className="text-sm text-muted-foreground">System Uptime</div>
           </div>
         </div>

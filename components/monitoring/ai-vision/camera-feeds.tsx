@@ -251,7 +251,7 @@ export function CameraFeeds() {
                       {/* Professional railway track simulation */}
                       <div className="absolute inset-0">
                         <img
-                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202025-09-24%20at%2008.26.58_d618a445.jpg-SflusO6liQlDRCkrfHRkkeaFemkKZM.jpeg"
+                          src="/images/design-mode/WhatsApp%20Image%202025-09-24%20at%2008.26.58_d618a445.jpg.jpeg"
                           alt="Railway track view"
                           className="w-full h-full object-cover opacity-70"
                         />

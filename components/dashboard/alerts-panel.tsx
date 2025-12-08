@@ -25,7 +25,7 @@ const initialAlerts: Alert[] = [
     type: "critical",
     title: "Track Geometry Deviation",
     description: "Lateral deviation exceeds 5mm threshold at KM 245.8",
-    timestamp: new Date(Date.now() - 300000),
+    timestamp: new Date(Date.now() - 3000),
     location: "Section A-B, KM 245.8",
     acknowledged: false,
   },
@@ -34,7 +34,7 @@ const initialAlerts: Alert[] = [
     type: "warning",
     title: "Rail Profile Wear",
     description: "Increased wear detected on right rail",
-    timestamp: new Date(Date.now() - 600000),
+    timestamp: new Date(Date.now() - 6000),
     location: "Section B-C, KM 267.2",
     acknowledged: false,
   },
@@ -43,7 +43,7 @@ const initialAlerts: Alert[] = [
     type: "info",
     title: "Maintenance Window",
     description: "Scheduled maintenance in 2 hours",
-    timestamp: new Date(Date.now() - 900000),
+    timestamp: new Date(Date.now() - 9000),
     location: "Section C-D, KM 289.5",
     acknowledged: true,
   },
@@ -52,7 +52,7 @@ const initialAlerts: Alert[] = [
     type: "warning",
     title: "Acceleration Spike",
     description: "Unusual vibration pattern detected",
-    timestamp: new Date(Date.now() - 1200000),
+    timestamp: new Date(Date.now() - 12000),
     location: "Section A-B, KM 234.1",
     acknowledged: false,
   },
@@ -64,35 +64,61 @@ export function AlertsPanel() {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() < 0.1) {
-        // 10% chance every 30 seconds
-        const newAlert: Alert = {
-          id: Date.now().toString(),
-          type: Math.random() < 0.3 ? "critical" : Math.random() < 0.6 ? "warning" : "info",
-          title: `System Alert ${Date.now()}`,
-          description: "Automated system notification",
-          timestamp: new Date(),
-          location: `KM ${(Math.random() * 300 + 200).toFixed(1)}`,
-          acknowledged: false,
-        }
-
-        setAlerts((prev) => [newAlert, ...prev.slice(0, 9)]) // Keep only 10 alerts
-
-        if (soundEnabled) {
-          // Simulate alert sound
-          toast({
-            title: "New Alert",
-            description: newAlert.title,
-            variant: newAlert.type === "critical" ? "destructive" : "default",
-          })
-        }
+const AlertMessage = (type: "critical" | "warning" | "info") => {
+    if (type === "critical") {
+      return {
+        title: "Track Geometry Deviation",
+        description: "Lateral deviation exceeded threshold limit",
       }
-    }, 30000)
+    }
+    if (type === "warning") {
+      return {
+        title: "Vibration Spike",
+        description: "Unusual vibration pattern detected",
+      }
+    }
+    return {
+      title: "System Notification",
+      description: "Routine system monitoring update",
+    }
+  }
 
-    return () => clearInterval(interval)
-  }, [soundEnabled, toast])
+  useEffect(() => {
+  const interval = setInterval(() => {
+    if (Math.random() < 0.8) {
+      // Determine alert type
+      const r = Math.random()
+const alertType: Alert["type"] =
+  r < 0.33 ? "critical" : r < 0.66 ? "warning" : "info"
+
+const msg = AlertMessage(alertType)
+
+const newAlert: Alert = {
+  id: Date.now().toString(),
+  type: alertType,
+  title: msg.title,
+  description: msg.description,
+  timestamp: new Date(),
+  location: `KM ${(Math.random() * 300 + 200).toFixed(1)}`,
+  acknowledged: false,
+}
+
+
+      setAlerts((prev) => [newAlert, ...prev.slice(0, 9)])
+
+      if (soundEnabled) {
+        toast({
+          title: "New Alert",
+          description: newAlert.title,
+          variant: newAlert.type === "critical" ? "destructive" : "default",
+        })
+      }
+    }
+  }, 5000)
+
+  return () => clearInterval(interval)
+}, [soundEnabled, toast])
+
 
   const acknowledgeAlert = (id: string) => {
     setAlerts((prev) => prev.map((alert) => (alert.id === id ? { ...alert, acknowledged: true } : alert)))

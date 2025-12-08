@@ -1,5 +1,6 @@
 import { Suspense } from "react"
-import { InfringementDetection } from "@/components/monitoring/ai-vision/infringement-detection"
+import { InfringementDetection } from "@/components/monitoring/infrigment/infringement-detection"
+import { ObjectTracking } from "@/components/monitoring/ai-vision/object-tracking"
 import { AlertTriangle } from "lucide-react"
 
 export default function InfringementPage() {
@@ -17,10 +18,16 @@ export default function InfringementPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 space-y-6">
         <Suspense fallback={<div>Loading infringement detection...</div>}>
           <InfringementDetection />
         </Suspense>
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Suspense fallback={<div>Loading object tracking...</div>}>
+            <ObjectTracking />
+          </Suspense>
+
+        </div>
       </main>
     </div>
   )

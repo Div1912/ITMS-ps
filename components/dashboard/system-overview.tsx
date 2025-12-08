@@ -49,7 +49,7 @@ const systemModules = [
   },
   {
     id: "ai-vision",
-    name: "AI Vision System",
+    name: "Condition Monitoring",
     status: "operational",
     health: 94,
     icon: Camera,
