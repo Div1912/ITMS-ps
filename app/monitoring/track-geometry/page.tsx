@@ -1,3 +1,5 @@
+"use client"
+
 import { TrackGeometryHeader } from "@/components/monitoring/track-geometry/track-geometry-header"
 import { GeometryMetrics } from "@/components/monitoring/track-geometry/geometry-metrics"
 import { DeviationCharts } from "@/components/monitoring/track-geometry/deviation-charts"

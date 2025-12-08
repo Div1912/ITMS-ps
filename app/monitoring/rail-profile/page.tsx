@@ -1,3 +1,5 @@
+"use client"
+
 import { Suspense } from "react"
 import { RailProfileHeader } from "@/components/monitoring/rail-profile/rail-profile-header"
 import { ProfileMetrics } from "@/components/monitoring/rail-profile/profile-metrics"

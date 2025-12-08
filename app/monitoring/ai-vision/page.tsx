@@ -1,3 +1,4 @@
+"use client"
 import { Suspense } from "react"
 import { AIVisionHeader } from "@/components/monitoring/ai-vision/ai-vision-header"
 import { ConditionMonitoringKpis } from "@/components/monitoring/ai-vision/condition-monitoring-kpis"

@@ -1,3 +1,5 @@
+"use client"
+
 import { Suspense } from "react"
 import { VideoRecordingHeader } from "@/components/monitoring/video-recording/video-recording-header"
 import { RecordingControls } from "@/components/monitoring/video-recording/recording-controls"
