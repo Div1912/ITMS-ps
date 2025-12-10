@@ -5,135 +5,127 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Ruler, AlertTriangle, CheckCircle } from "lucide-react"
 
-// Simulate real-time geometry data
-const generateGeometryData = () => ({
-  lateralDeviation: {
-    current: 2.1 + Math.random() * 1.5,
-    max: 5.0,
-    status: "normal",
-  },
-  verticalDeviation: {
-    current: 1.8 + Math.random() * 1.2,
-    max: 4.0,
-    status: "normal",
-  },
-  gauge: {
-    current: 1435 + (Math.random() - 0.5) * 3,
-    nominal: 1435,
-    tolerance: 3,
-    status: "normal",
-  },
-  twist: {
-    current: 0.5 + Math.random() * 0.8,
-    max: 2.0,
-    status: "normal",
-  },
-  crossLevel: {
-    current: 1.2 + Math.random() * 0.8,
-    max: 3.0,
-    status: "normal",
-  },
-  curvature: {
-    current: 0.8 + Math.random() * 0.4,
-    max: 2.5,
-    status: "normal",
-  },
-})
+function getMetricStatus(value: number, limit: number) {
+  if (value >= limit) return "critical"
+  if (value >= limit * 0.7) return "warning"
+  return "normal"
+}
 
-export function GeometryMetrics() {
-  const [data, setData] = useState(generateGeometryData())
+function getGaugeStatus(value: number, nominal: number, tolerance: number) {
+  if (value < nominal - tolerance || value > nominal + tolerance) return "critical"
+  if (Math.abs(value - nominal) > tolerance * 0.7) return "warning"
+  return "normal"
+}
+
+const statusColor: any = {
+  normal: "text-green-400",
+  warning: "text-yellow-400",
+  critical: "text-red-400",
+}
+
+const statusIcon: any = {
+  normal: <CheckCircle className="w-4 h-4 text-green-400" />,
+  warning: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
+  critical: <AlertTriangle className="w-4 h-4 text-red-400" />,
+}
+
+// ⭐⭐ THIS IS THE IMPORTANT EXPORT ⭐⭐
+export function GeometryMetrics({ initialData }: { initialData?: any }) {
+  const [data, setData] = useState<any>(initialData)
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setData(generateGeometryData())
-      setLastUpdate(new Date())
-    }, 2000)
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/geometry")
+        const json = await res.json()
+
+        if (
+          json &&
+          typeof json.lateralDeviation === "number" &&
+          typeof json.verticalDeviation === "number" &&
+          typeof json.gauge === "number" &&
+          typeof json.twist === "number" &&
+          typeof json.crossLevel === "number" &&
+          typeof json.curvature === "number"
+        ) {
+          setData(json)
+          setLastUpdate(new Date())
+        } else {
+          console.warn("[v0] Invalid geometry data format:", json)
+        }
+      } catch (err) {
+        console.error("[v0] Fetch error:", err)
+      }
+    }, 500)
 
     return () => clearInterval(interval)
   }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "normal":
-        return "text-green-400"
-      case "warning":
-        return "text-yellow-400"
-      case "critical":
-        return "text-red-400"
-      default:
-        return "text-gray-400"
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "normal":
-        return <CheckCircle className="w-4 h-4 text-green-400" />
-      case "warning":
-        return <AlertTriangle className="w-4 h-4 text-yellow-400" />
-      case "critical":
-        return <AlertTriangle className="w-4 h-4 text-red-400" />
-      default:
-        return <CheckCircle className="w-4 h-4 text-gray-400" />
-    }
+  if (!data || typeof data.lateralDeviation !== "number") {
+    return (
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm p-6 text-center">
+        <h2 className="text-muted-foreground">Waiting for sensor data...</h2>
+        <p className="text-xs text-muted-foreground mt-2">Ensure Pi script is running and sending to this URL</p>
+      </Card>
+    )
   }
 
   const metrics = [
     {
       id: "lateral",
       name: "Lateral Deviation",
-      value: data.lateralDeviation.current,
+      value: data.lateralDeviation ?? 0,
       unit: "mm",
-      max: data.lateralDeviation.max,
-      status: data.lateralDeviation.status,
+      max: 5.0,
+      status: getMetricStatus(data.lateralDeviation ?? 0, 5.0),
       description: "Horizontal track alignment",
     },
     {
       id: "vertical",
       name: "Vertical Deviation",
-      value: data.verticalDeviation.current,
+      value: data.verticalDeviation ?? 0,
       unit: "mm",
-      max: data.verticalDeviation.max,
-      status: data.verticalDeviation.status,
+      max: 4.0,
+      status: getMetricStatus(data.verticalDeviation ?? 0, 4.0),
       description: "Vertical track profile",
     },
     {
       id: "gauge",
       name: "Track Gauge",
-      value: data.gauge.current,
+      value: data.gauge ?? 1435,
       unit: "mm",
-      nominal: data.gauge.nominal,
-      tolerance: data.gauge.tolerance,
-      status: data.gauge.status,
+      nominal: 1435,
+      tolerance: 3,
+      status: getGaugeStatus(data.gauge ?? 1435, 1435, 3),
       description: "Distance between rails",
     },
     {
       id: "twist",
       name: "Track Twist",
-      value: data.twist.current,
+      value: data.twist ?? 0,
       unit: "mm",
-      max: data.twist.max,
-      status: data.twist.status,
+      max: 2.0,
+      status: getMetricStatus(data.twist ?? 0, 2.0),
       description: "Rail rotation difference",
     },
     {
       id: "crosslevel",
       name: "Cross Level",
-      value: data.crossLevel.current,
+      value: data.crossLevel ?? 0,
       unit: "mm",
-      max: data.crossLevel.max,
-      status: data.crossLevel.status,
+      max: 3.0,
+      status: getMetricStatus(data.crossLevel ?? 0, 3.0),
       description: "Rail height difference",
     },
     {
       id: "curvature",
       name: "Curvature",
-      value: data.curvature.current,
+      value: data.curvature ?? 0,
       unit: "mm",
-      max: data.curvature.max,
-      status: data.curvature.status,
-      description: "Track curve radius",
+      max: 2.5,
+      status: getMetricStatus(data.curvature ?? 0, 2.5),
+      description: "Track curve radius deviation",
     },
   ]
 
@@ -154,19 +146,20 @@ export function GeometryMetrics() {
           </div>
         </div>
       </CardHeader>
+
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {metrics.map((metric) => (
             <div key={metric.id} className="p-4 rounded-lg border border-border/50 bg-background/50">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-foreground">{metric.name}</h4>
-                {getStatusIcon(metric.status)}
+                {statusIcon[metric.status]}
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-2xl font-bold ${getStatusColor(metric.status)}`}>
-                    {metric.value.toFixed(2)}
+                  <span className={`text-2xl font-bold ${statusColor[metric.status]}`}>
+                    {(metric.value ?? 0).toFixed(2)}
                   </span>
                   <span className="text-sm text-muted-foreground">{metric.unit}</span>
                 </div>
