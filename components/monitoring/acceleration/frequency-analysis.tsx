@@ -7,31 +7,35 @@ import { Badge } from "@/components/ui/badge"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Radio, Settings, Download } from "lucide-react"
 
-const VIB_URL = "https://consideration-bathrooms-llp-translated.trycloudflare.com/vibration"
+const VIB_URL = "https://citizen-accepted-mrs-lens.trycloudflare.com/vibration"
 
 export function FrequencyAnalysis() {
   const [frequencyData, setFrequencyData] = useState<any[]>([])
   const [dominantFreqs, setDominantFreqs] = useState<any[]>([])
   const [stats, setStats] = useState({ peak: 0, dominant: 0, rms: 0 })
+  const [isLive, setIsLive] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(VIB_URL, { cache: "no-store" })
+        if (!res.ok) throw new Error("Failed to fetch")
+
         const json = await res.json()
 
         const accel = [
-          json.accel_filtered_m_s2?.vertical ?? 0,
-          json.accel_filtered_m_s2?.lateral ?? 0,
-          json.accel_filtered_m_s2?.longitudinal ?? 0,
+          Number(json.accel_filtered_m_s2?.vertical ?? json.vertical ?? 0),
+          Number(json.accel_filtered_m_s2?.lateral ?? json.lateral ?? 0),
+          Number(json.accel_filtered_m_s2?.longitudinal ?? json.longitudinal ?? 0),
         ]
 
         const spectrum = generateFrequencySpectrum(accel)
         setFrequencyData(spectrum.data)
         setDominantFreqs(spectrum.dominant)
         setStats(spectrum.stats)
-      } catch {
-        // Silent fallback
+        setIsLive(true)
+      } catch (err) {
+        setIsLive(false)
       }
     }, 2000)
 
@@ -90,6 +94,11 @@ export function FrequencyAnalysis() {
           <CardTitle className="flex items-center gap-2">
             <Radio className="w-5 h-5 text-cyan-400" />
             Frequency Analysis
+            <span
+              className={`text-xs px-2 py-1 rounded ${isLive ? "text-green-400 bg-green-500/10" : "text-yellow-400 bg-yellow-500/10"}`}
+            >
+              {isLive ? "Live" : "Connecting..."}
+            </span>
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button

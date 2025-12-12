@@ -6,12 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 import { Badge } from "@/components/ui/badge"
 
-const API_URL = "https://pendant-adjacent-factory-load.trycloudflare.com/geometry"
+const API_URL = "https://images-malpractice-acid-checked.trycloudflare.com/geometry"
 
 export function DeviationCharts() {
   const [data, setData] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("lateral")
-  const [isLive, setIsLive] = useState(true)
+  const [isLive, setIsLive] = useState(false)
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -22,6 +22,10 @@ export function DeviationCharts() {
         if (!res.ok) throw new Error("Failed to fetch")
 
         const json = await res.json()
+
+        if (!json || typeof json !== "object") {
+          throw new Error("Invalid data format")
+        }
 
         const newPoint = {
           distance: (245.0 + data.length * 0.1).toFixed(1),
@@ -38,23 +42,19 @@ export function DeviationCharts() {
 
         setData((prev) => [...prev.slice(-49), newPoint])
         setIsLive(true)
+        console.log("[v0] Deviation data updated:", newPoint)
       } catch (err) {
         setIsLive(false)
+        // Silent retry - no console spam
       }
     }
 
-    // Initial fetch
     fetchData()
-
-    // Poll every second
     interval = setInterval(fetchData, 1000)
 
     return () => clearInterval(interval)
   }, [data.length])
 
-  // ----------------------------------------
-  // Chart config
-  // ----------------------------------------
   const chartConfigs: any = {
     lateral: {
       dataKey: "lateral",
@@ -120,7 +120,6 @@ export function DeviationCharts() {
             <TabsTrigger value="twist">Twist</TabsTrigger>
           </TabsList>
 
-          {/* LIVE VALUE BOX */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50">
             <div>
               <span className="text-sm text-muted-foreground">{currentConfig.name}</span>
@@ -134,7 +133,6 @@ export function DeviationCharts() {
             </div>
           </div>
 
-          {/* GRAPH TABS */}
           {Object.entries(chartConfigs).map(([key, config]: any) => (
             <TabsContent key={key} value={key} className="space-y-4">
               <div className="h-80">
@@ -153,11 +151,9 @@ export function DeviationCharts() {
                       formatter={(value: any) => [`${value.toFixed(2)} ${config.unit}`, config.name]}
                     />
 
-                    {/* LIMIT LINES */}
                     <ReferenceLine y={config.limits.upper} stroke="#ef4444" strokeDasharray="5 5" />
                     <ReferenceLine y={config.limits.lower} stroke="#ef4444" strokeDasharray="5 5" />
 
-                    {/* Gauge nominal line */}
                     {config.nominal && <ReferenceLine y={config.nominal} stroke="#10b981" strokeDasharray="3 3" />}
 
                     <Line type="monotone" dataKey={config.dataKey} stroke={config.color} strokeWidth={2} dot={false} />

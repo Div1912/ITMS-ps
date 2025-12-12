@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { BarChart3, Pause, RotateCcw } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 
-const VIB_URL = "https://consideration-bathrooms-llp-translated.trycloudflare.com/vibration"
+const VIB_URL = "https://citizen-accepted-mrs-lens.trycloudflare.com/vibration"
 
 export function AccelerationCharts() {
   const [data, setData] = useState<any[]>([])
@@ -22,6 +22,8 @@ export function AccelerationCharts() {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(VIB_URL, { cache: "no-store" })
+        if (!res.ok) throw new Error("Failed to fetch")
+
         const json = await res.json()
 
         const time = new Date().toLocaleTimeString("en-IN", {
@@ -30,31 +32,36 @@ export function AccelerationCharts() {
           second: "2-digit",
         })
 
-        const vertical = json.accel_filtered_m_s2?.vertical ?? 0
-        const lateral = json.accel_filtered_m_s2?.lateral ?? 0
-        const longitudinal = json.accel_filtered_m_s2?.longitudinal ?? 0
+        const vertical = Number(json.accel_filtered_m_s2?.vertical ?? json.vertical ?? 0)
+        const lateral = Number(json.accel_filtered_m_s2?.lateral ?? json.lateral ?? 0)
+        const longitudinal = Number(json.accel_filtered_m_s2?.longitudinal ?? json.longitudinal ?? 0)
 
         const newPoint = { time, vertical, lateral, longitudinal }
         setData((prev) => [...prev.slice(-59), newPoint])
         setIsLive(true)
 
-        // Save to Supabase
-        await supabase.from("acceleration_data").insert({
-          vertical_accel: vertical,
-          lateral_accel: lateral,
-          longitudinal_accel: longitudinal,
-          rms_vibration: json.metrics?.rms_vibration_mm_s ?? 0,
-          peak_vibration: json.metrics?.peak_vibration_mm_s ?? 0,
-          ride_quality_index: json.metrics?.rqi ?? 0,
-        })
-      } catch {
-        // Silent fallback - no error logging
+        console.log("[v0] Acceleration data updated:", newPoint)
+
+        try {
+          await supabase.from("acceleration_data").insert({
+            vertical_accel: vertical,
+            lateral_accel: lateral,
+            longitudinal_accel: longitudinal,
+            rms_vibration: Number(json.metrics?.rms_vibration_mm_s ?? 0),
+            peak_vibration: Number(json.metrics?.peak_vibration_mm_s ?? 0),
+            ride_quality_index: Number(json.metrics?.rqi ?? 0),
+          })
+        } catch (dbErr) {
+          // Silent DB error - non-critical
+        }
+      } catch (err) {
         setIsLive(false)
+        // Silent retry - no console spam
       }
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [paused])
+  }, [paused, supabase])
 
   const latest = data.length > 0 ? data[data.length - 1] : { vertical: 0, lateral: 0, longitudinal: 0 }
 
