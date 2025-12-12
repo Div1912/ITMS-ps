@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { BarChart3, Pause, RotateCcw } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 
-const VIB_URL = "https://citizen-accepted-mrs-lens.trycloudflare.com/vibration"
+const VIB_URL = "https://asia-threshold-controls-inns.trycloudflare.com/vibration"
 
 export function AccelerationCharts() {
   const [data, setData] = useState<any[]>([])

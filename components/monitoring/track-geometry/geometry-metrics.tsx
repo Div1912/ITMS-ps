@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress"
 import { Ruler, CheckCircle, AlertTriangle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
-const CLOUD_URL = "https://images-malpractice-acid-checked.trycloudflare.com/geometry"
+const CLOUD_URL = "https://museum-pod-doom-cheese.trycloudflare.com/geometry"
 
 export function GeometryMetrics() {
   const [data, setData] = useState<any>(null)

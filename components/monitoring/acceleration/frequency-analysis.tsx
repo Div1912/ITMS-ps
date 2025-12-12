@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Radio, Settings, Download } from "lucide-react"
 
-const VIB_URL = "https://citizen-accepted-mrs-lens.trycloudflare.com/vibration"
+const VIB_URL = "https://asia-threshold-controls-inns.trycloudflare.com/vibration"
 
 export function FrequencyAnalysis() {
   const [frequencyData, setFrequencyData] = useState<any[]>([])

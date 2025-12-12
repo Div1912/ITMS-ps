@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 import { Badge } from "@/components/ui/badge"
 
-const API_URL = "https://images-malpractice-acid-checked.trycloudflare.com/geometry"
+const API_URL = "https://museum-pod-doom-cheese.trycloudflare.com/geometry"
 
 export function DeviationCharts() {
   const [data, setData] = useState<any[]>([])

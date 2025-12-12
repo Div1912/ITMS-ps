@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Activity, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 
-const VIB_URL = "https://citizen-accepted-mrs-lens.trycloudflare.com/vibration"
+const VIB_URL = "https://asia-threshold-controls-inns.trycloudflare.com/vibration"
 
 export function VibrationMetrics() {
   const [data, setData] = useState<any>(null)
