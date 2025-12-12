@@ -1,5 +1,3 @@
-"use client"
-
 import { Suspense } from "react"
 import { InfringementDetection } from "@/components/monitoring/infrigment/infringement-detection"
 import { ObjectTracking } from "@/components/monitoring/ai-vision/object-tracking"
@@ -24,10 +22,11 @@ export default function InfringementPage() {
         <Suspense fallback={<div>Loading infringement detection...</div>}>
           <InfringementDetection />
         </Suspense>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Suspense fallback={<div>Loading object tracking...</div>}>
             <ObjectTracking />
           </Suspense>
+
         </div>
       </main>
     </div>

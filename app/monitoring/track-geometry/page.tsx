@@ -1,49 +1,25 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { TrackGeometryHeader } from "@/components/monitoring/track-geometry/track-geometry-header"
 import { GeometryMetrics } from "@/components/monitoring/track-geometry/geometry-metrics"
-import { Card } from "@/components/ui/card"
+import { DeviationCharts } from "@/components/monitoring/track-geometry/deviation-charts"
+import { ComplianceStatus } from "@/components/monitoring/track-geometry/compliance-status"
+import { SensorStatus } from "@/components/monitoring/track-geometry/sensor-status"
 
-export default function TrackGeometryMonitoring() {
-  const [geometry, setGeometry] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchGeometry = async () => {
-      try {
-        const res = await fetch("/api/geometry")
-        const json = await res.json()
-
-        if (json && json.timestamp) {
-          setGeometry(json)
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("Error fetching geometry:", error)
-      }
-    }
-
-    // Initial fetch
-    fetchGeometry()
-
-    // Poll for updates every 500ms
-    const interval = setInterval(fetchGeometry, 500)
-
-    return () => clearInterval(interval)
-  }, [])
-
+export default function TrackGeometryPage() {
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Track Geometry Monitoring</h1>
-      <p className="text-muted-foreground">Real-time track alignment & geometry analysis</p>
-
-      {loading ? (
-        <Card className="w-full p-8">
-          <div className="text-center text-muted-foreground text-lg">Waiting for live geometry data…</div>
-        </Card>
-      ) : (
-        <GeometryMetrics initialData={geometry} />
-      )}
+    <div className="min-h-screen bg-background">
+      <TrackGeometryHeader />
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <GeometryMetrics />
+            <DeviationCharts />
+          </div>
+          <div className="space-y-6">
+            <ComplianceStatus />
+            <SensorStatus />
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

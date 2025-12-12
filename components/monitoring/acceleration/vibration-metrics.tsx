@@ -1,219 +1,161 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Activity, TrendingUp, TrendingDown, Minus } from "lucide-react"
 
-// ⭐ IMPORTANT: Replace tunnel URL whenever Cloudflare changes it
-const API_URL = "https://defined-running-lucy-retain.trycloudflare.com"
-
-// Threshold limits (you can tune these anytime)
-const LIMITS = {
-  vertical: 1.0,
-  lateral: 0.8,
-  longitudinal: 0.5,
-}
-
-// Status level detection
-const getStatus = (value: number, limit: number) => {
-  if (value > limit) return "critical"
-  if (value > limit * 0.8) return "warning"
-  return "good"
-}
-
-// Status badge colors
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "good":
-      return "text-green-400 bg-green-500/10 border-green-500/20"
-    case "warning":
-      return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
-    case "critical":
-      return "text-red-400 bg-red-500/10 border-red-500/20"
-    default:
-      return "text-muted-foreground bg-muted/10 border-border"
-  }
-}
-
-// Trend detection logic
-const getTrend = (current: number, previous: number) => {
-  if (current > previous) return "up"
-  if (current < previous) return "down"
-  return "stable"
-}
-
-const getTrendIcon = (trend: string) => {
-  switch (trend) {
-    case "up":
-      return <TrendingUp className="w-4 h-4 text-red-400" />
-    case "down":
-      return <TrendingDown className="w-4 h-4 text-green-400" />
-    default:
-      return <Minus className="w-4 h-4 text-muted-foreground" />
-  }
-}
+// ⭐ Your Cloudflare tunnel for vibration backend
+const VIB_URL = "https://axis-baking-courier-actions.trycloudflare.com/vibration"
 
 export function VibrationMetrics() {
-  const [acc, setAcc] = useState({
-    vertical: 0,
-    lateral: 0,
-    longitudinal: 0,
-  })
-
-  const [prevAcc, setPrevAcc] = useState({
-    vertical: 0,
-    lateral: 0,
-    longitudinal: 0,
-  })
-
-  const [isMoving, setIsMoving] = useState(false)
+  const [data, setData] = useState<any>(null)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
 
   useEffect(() => {
-    const fetchLive = async () => {
+    const interval = setInterval(async () => {
       try {
-        const res = await fetch(${API_URL}/metrics, { cache: "no-store" })
-
-        // ⭐ Prevent crash if Cloudflare returns HTML or empty response
-        const json = await res.json().catch(() => null)
-        if (!json) {
-          setIsMoving(false)
-          setAcc({ vertical: 0, lateral: 0, longitudinal: 0 })
-          return
-        }
-
-        const x = json.longitudinalAcceleration
-        const y = json.lateralAcceleration
-        const z = json.verticalAcceleration
-
-        // ⭐ Motion detection using gravity-corrected RMS
-        const motion = Math.sqrt(
-          x * x + y * y + (z - 9.8) * (z - 9.8)
-        )
-
-        const moving = motion > 0.25 // stable threshold
-        setIsMoving(moving)
-
-        // ⭐ Save TRUE snapshot BEFORE updating acc
-        setPrevAcc({
-          vertical: acc.vertical,
-          lateral: acc.lateral,
-          longitudinal: acc.longitudinal,
-        })
-
-        // ❌ If stationary → zero values
-        if (!moving) {
-          setAcc({ vertical: 0, lateral: 0, longitudinal: 0 })
-          return
-        }
-
-        // ✅ Update values when moving
-        setAcc({
-          vertical: Math.abs(z),
-          lateral: Math.abs(y),
-          longitudinal: Math.abs(x),
-        })
-
+        const res = await fetch(VIB_URL, { cache: "no-store" })
+        const json = await res.json()
+        setData(json)
+        setLastUpdate(new Date())
       } catch (err) {
-        console.log("Failed to fetch live data", err)
+        console.error("Vibration fetch error:", err)
       }
-    }
+    }, 1000)
 
-    // Start polling every 200ms
-    fetchLive()
-    const interval = setInterval(fetchLive, 200)
     return () => clearInterval(interval)
-  }, []) // DO NOT MODIFY
+  }, [])
 
+  if (!data) {
+    return (
+      <Card className="p-6 text-center text-muted-foreground">
+        Connecting to vibration sensors...
+      </Card>
+    )
+  }
+
+  // Extract values from backend
+  const vertical = data.accel_filtered_m_s2?.vertical ?? 0
+  const lateral = data.accel_filtered_m_s2?.lateral ?? 0
+  const longitudinal = data.accel_filtered_m_s2?.longitudinal ?? 0
+
+  const rmsVib = data.metrics?.rms_vibration_mm_s ?? 0
+  const peakVib = data.metrics?.peak_vibration_mm_s ?? 0
+  const rqi = data.metrics?.rqi ?? 0
+
+  // Converted list for UI mapping
   const metrics = [
     {
       title: "Vertical Acceleration",
-      value: acc.vertical.toFixed(2),
+      value: vertical,
       unit: "m/s²",
-      limit: LIMITS.vertical,
-      percentage: Math.min((acc.vertical / LIMITS.vertical) * 100, 100),
-      status: getStatus(acc.vertical, LIMITS.vertical),
-      trend: getTrend(acc.vertical, prevAcc.vertical),
+      limit: 1.0,
     },
     {
       title: "Lateral Acceleration",
-      value: acc.lateral.toFixed(2),
+      value: lateral,
       unit: "m/s²",
-      limit: LIMITS.lateral,
-      percentage: Math.min((acc.lateral / LIMITS.lateral) * 100, 100),
-      status: getStatus(acc.lateral, LIMITS.lateral),
-      trend: getTrend(acc.lateral, prevAcc.lateral),
+      limit: 0.8,
     },
     {
       title: "Longitudinal Acceleration",
-      value: acc.longitudinal.toFixed(2),
+      value: longitudinal,
       unit: "m/s²",
-      limit: LIMITS.longitudinal,
-      percentage: Math.min((acc.longitudinal / LIMITS.longitudinal) * 100, 100),
-      status: getStatus(acc.longitudinal, LIMITS.longitudinal),
-      trend: getTrend(acc.longitudinal, prevAcc.longitudinal),
+      limit: 0.5,
+    },
+    {
+      title: "RMS Vibration",
+      value: rmsVib,
+      unit: "mm/s",
+      limit: 3.5,
+    },
+    {
+      title: "Peak Vibration",
+      value: peakVib,
+      unit: "mm/s",
+      limit: 12.0,
+    },
+    {
+      title: "Ride Quality Index",
+      value: rqi,
+      unit: "RQI",
+      limit: 4.0,
     },
   ]
+
+  // Convert to percentage
+  const toPercent = (value: number, limit: number) =>
+    Math.min(100, ((value / limit) * 100))
+
+  // Color based on severity
+  const getStatus = (value: number, limit: number) => {
+    const pct = value / limit
+    if (pct < 0.6) return "good"
+    if (pct < 0.85) return "warning"
+    return "critical"
+  }
+
+  const statusStyles = {
+    good: "text-green-400 bg-green-500/10 border-green-500/20",
+    warning: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
+    critical: "text-red-400 bg-red-500/10 border-red-500/20",
+  }
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case "up": return <TrendingUp className="w-4 h-4 text-red-400" />
+      case "down": return <TrendingDown className="w-4 h-4 text-green-400" />
+      default: return <Minus className="w-4 h-4 text-muted-foreground" />
+    }
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-blue-400" />
-          Vibration & Acceleration Metrics
+          Vibration Metrics (Live)
         </CardTitle>
-
-        <p className="text-sm text-muted-foreground">
-          {isMoving ? "📡 Updating live (device moving)" : "⚠ Waiting for motion…"}
-        </p>
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {metrics.map((metric, index) => (
-            <div
-              key={index}
-              className="p-4 rounded-lg border border-border bg-card/50"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-foreground">
-                  {metric.title}
-                </h3>
-                {getTrendIcon(metric.trend)}
-              </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Last update: {lastUpdate.toLocaleTimeString("en-IN")}
+        </p>
 
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-foreground">
-                    {metric.value}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {metric.unit}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    / {metric.limit}
-                  </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {metrics.map((m, i) => {
+            const status = getStatus(m.value, m.limit)
+            const pct = toPercent(m.value, m.limit)
+
+            return (
+              <div key={i} className="p-4 rounded-lg border bg-card/50">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-foreground">{m.title}</h3>
+                  {getTrendIcon("stable")}
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      variant="outline"
-                      className={getStatusColor(metric.status)}
-                    >
-                      {metric.status.toUpperCase()}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {metric.percentage.toFixed(0)}%
-                    </span>
+                <div className="space-y-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold">{m.value.toFixed(2)}</span>
+                    <span className="text-sm text-muted-foreground">{m.unit}</span>
+                    <span className="text-xs text-muted-foreground">/ {m.limit}</span>
                   </div>
 
-                  <Progress value={metric.percentage} className="h-2" />
+                  <div className="flex justify-between items-center">
+                    <Badge variant="outline" className={statusStyles[status]}>
+                      {status.toUpperCase()}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">{pct.toFixed(0)}%</span>
+                  </div>
+
+                  <Progress value={pct} className="h-2" />
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </CardContent>
     </Card>

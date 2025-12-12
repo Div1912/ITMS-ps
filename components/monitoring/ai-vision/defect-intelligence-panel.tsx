@@ -16,7 +16,6 @@ export function DefectIntelligencePanel() {
       severity: "critical",
       category: "fastening",
       location: "KM 125.4 + 200m",
-      distanceAhead: "Detected 3.2 km ahead",
       confidence: 96,
       recurrence: "new",
       action: "Immediate Repair",
@@ -29,7 +28,6 @@ export function DefectIntelligencePanel() {
       severity: "major",
       category: "alignment",
       location: "KM 126.8 + 50m",
-      distanceAhead: "Detected 2.0 km ahead",
       confidence: 94,
       recurrence: "recurring",
       action: "Manual Inspection",
@@ -42,7 +40,6 @@ export function DefectIntelligencePanel() {
       severity: "critical",
       category: "structural",
       location: "KM 127.2 + 300m",
-      distanceAhead: "Detected 1.5 km ahead",
       confidence: 89,
       recurrence: "persistent",
       action: "Emergency Repair",
@@ -55,7 +52,6 @@ export function DefectIntelligencePanel() {
       severity: "major",
       category: "joint",
       location: "KM 128.1 + 100m",
-      distanceAhead: "Detected 0.8 km ahead",
       confidence: 92,
       recurrence: "new",
       action: "Monitoring",
@@ -68,7 +64,6 @@ export function DefectIntelligencePanel() {
       severity: "minor",
       category: "ballast",
       location: "KM 129.5 + 150m",
-      distanceAhead: "Detected 0.9 km ahead",
       confidence: 87,
       recurrence: "recurring",
       action: "Ballast Renewal",
@@ -81,7 +76,6 @@ export function DefectIntelligencePanel() {
       severity: "critical",
       category: "wear",
       location: "KM 130.2 + 75m",
-      distanceAhead: "Detected 1.6 km ahead",
       confidence: 91,
       recurrence: "new",
       action: "Rail Grinding",
@@ -176,8 +170,8 @@ export function DefectIntelligencePanel() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Distance Context</p>
-                      <p className="text-sm font-medium text-cyan-400">{defect.distanceAhead}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Recurrence</p>
+                      <Badge className="text-xs bg-purple-500/20 text-purple-400">{defect.recurrence}</Badge>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Timestamp</p>
