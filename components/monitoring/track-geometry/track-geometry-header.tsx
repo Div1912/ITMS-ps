@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Play, Pause, Download, Settings, MapPin, FileJson, FileSpreadsheet } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createBrowserClient } from "@/lib/supabase/client"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function TrackGeometryHeader() {
@@ -14,7 +14,7 @@ export function TrackGeometryHeader() {
   const [selectedSection, setSelectedSection] = useState("section-a")
   const [isExporting, setIsExporting] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createBrowserClient()
 
   const exportToCSV = async () => {
     try {
@@ -110,7 +110,7 @@ export function TrackGeometryHeader() {
   }
 
   return (
-    <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
+    <header className="border-b border-border/50 bg-card/30 relative z-10">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -156,14 +156,19 @@ export function TrackGeometryHeader() {
               )}
             </Button>
 
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isExporting} className="relative z-10 bg-transparent">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isExporting}
+                  className="relative z-20 pointer-events-auto bg-transparent"
+                >
                   <Download className="w-4 h-4 mr-2" />
                   {isExporting ? "Exporting..." : "Export Data"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-50">
+              <DropdownMenuContent className="z-[100]" align="end">
                 <DropdownMenuItem onClick={exportToCSV}>
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
                   Export as CSV
