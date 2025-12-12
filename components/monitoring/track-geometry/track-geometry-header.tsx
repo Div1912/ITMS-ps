@@ -158,12 +158,12 @@ export function TrackGeometryHeader() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isExporting}>
+                <Button variant="outline" size="sm" disabled={isExporting} className="relative z-10 bg-transparent">
                   <Download className="w-4 h-4 mr-2" />
                   {isExporting ? "Exporting..." : "Export Data"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent className="z-50">
                 <DropdownMenuItem onClick={exportToCSV}>
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
                   Export as CSV

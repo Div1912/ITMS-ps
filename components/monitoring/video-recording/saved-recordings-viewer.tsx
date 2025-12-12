@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Play, Download, Trash2, Clock, HardDrive, RefreshCw } from "lucide-react"
+import { Play, Download, Trash2, Clock, HardDrive, RefreshCw, AlertCircle } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
@@ -22,6 +22,7 @@ interface Recording {
 export function SavedRecordingsViewer() {
   const [recordings, setRecordings] = useState<Recording[]>([])
   const [loading, setLoading] = useState(true)
+  const [needsMigration, setNeedsMigration] = useState(false)
   const supabase = createBrowserClient()
   const { toast } = useToast()
 
@@ -57,6 +58,11 @@ export function SavedRecordingsViewer() {
 
       console.log("[v0] Found", data?.length || 0, "recordings")
       setRecordings(data || [])
+
+      if (data && data.length > 0) {
+        const hasRecordingsWithoutUrl = data.some((r) => !r.video_url)
+        setNeedsMigration(hasRecordingsWithoutUrl)
+      }
     } catch (err) {
       console.error("[v0] Failed to fetch recordings:", err)
       toast({
@@ -180,6 +186,22 @@ export function SavedRecordingsViewer() {
         </div>
       </CardHeader>
       <CardContent>
+        {needsMigration && (
+          <div className="mb-4 p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/10">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-400 mb-1">Database Migration Required</p>
+                <p className="text-yellow-400/80 text-xs">
+                  Run the SQL script{" "}
+                  <code className="px-1 py-0.5 rounded bg-yellow-500/20">scripts/004_add_video_url_column.sql</code>{" "}
+                  from the Scripts folder to enable video playback.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {recordings.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Play className="w-12 h-12 mx-auto mb-3 opacity-50" />

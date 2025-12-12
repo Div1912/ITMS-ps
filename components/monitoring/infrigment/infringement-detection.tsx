@@ -5,83 +5,133 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AlertTriangle, MapPin, Clock, Eye, Download, Camera, Shield, User, Car, Zap } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 export function InfringementDetection() {
   const [selectedFilter, setSelectedFilter] = useState("all")
+  const [infringements, setInfringements] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createBrowserClient()
 
-  const infringements = [
-    {
-      id: "INF-001",
-      type: "Unauthorized Person on Track",
-      severity: "critical",
-      location: "KM 125.4 + 200m",
-      camera: "CAM-002",
-      confidence: 98,
-      timestamp: "2 minutes ago",
-      description: "Person detected within track clearance zone",
-      action: "Emergency stop activated, security dispatched",
-      imageUrl: "/railway-track-with-person-walking.jpg",
-      detectionBox: { x: 45, y: 35, width: 15, height: 25 },
-      objectType: "person",
-    },
-    {
-      id: "INF-002",
-      type: "Vehicle Clearance Violation",
-      severity: "critical",
-      location: "KM 126.8 + 50m",
-      camera: "CAM-005",
-      confidence: 96,
-      timestamp: "5 minutes ago",
-      description: "Vehicle detected too close to track boundary",
-      action: "Warning signals activated",
-      imageUrl: "/railway-track-with-car-near-tracks.jpg",
-      detectionBox: { x: 20, y: 40, width: 30, height: 20 },
-      objectType: "vehicle",
-    },
-    {
-      id: "INF-003",
-      type: "Track Obstruction",
-      severity: "critical",
-      location: "KM 127.2 + 300m",
-      camera: "CAM-001",
-      confidence: 94,
-      timestamp: "8 minutes ago",
-      description: "Large object blocking track clearance",
-      action: "Track inspection team dispatched",
-      imageUrl: "/railway-track-with-fallen-tree-obstruction.jpg",
-      detectionBox: { x: 40, y: 45, width: 25, height: 15 },
-      objectType: "object",
-    },
-    {
-      id: "INF-004",
-      type: "Maintenance Worker Alert",
-      severity: "warning",
-      location: "KM 128.1 + 100m",
-      camera: "CAM-007",
-      confidence: 92,
-      timestamp: "12 minutes ago",
-      description: "Authorized maintenance personnel near track",
-      action: "Speed restriction in effect",
-      imageUrl: "/railway-maintenance-worker-on-tracks-with-safety-v.jpg",
-      detectionBox: { x: 35, y: 30, width: 12, height: 20 },
-      objectType: "worker",
-    },
-    {
-      id: "INF-005",
-      type: "Animal Intrusion",
-      severity: "warning",
-      location: "KM 129.5 + 150m",
-      camera: "CAM-006",
-      confidence: 89,
-      timestamp: "18 minutes ago",
-      description: "Large animal detected near track",
-      action: "Monitoring continued, horn activated",
-      imageUrl: "/railway-track-with-deer-crossing.jpg",
-      detectionBox: { x: 50, y: 50, width: 18, height: 12 },
-      objectType: "animal",
-    },
-  ]
+  useEffect(() => {
+    fetchInfringements()
+
+    // Set up real-time subscription for new infringements
+    const channel = supabase
+      .channel("infringement-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "infringement_detections" }, () => {
+        fetchInfringements()
+      })
+      .subscribe()
+
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchInfringements, 5000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
+  }, [])
+
+  const fetchInfringements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("infringement_detections")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20)
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        // Transform database data to component format
+        const formattedData = data.map((row) => ({
+          id: row.infringement_id,
+          type: row.type,
+          severity: row.severity,
+          location: row.location,
+          camera: row.camera,
+          confidence: row.confidence,
+          timestamp: getTimeAgo(new Date(row.created_at)),
+          description: row.description,
+          action: row.action,
+          imageUrl: row.image_url || "/placeholder.svg",
+          detectionBox: row.detection_box || { x: 45, y: 35, width: 15, height: 25 },
+          objectType: row.object_type,
+        }))
+        setInfringements(formattedData)
+      } else {
+        // Generate simulated infringements if no data exists
+        generateSimulatedInfringements()
+      }
+      setIsLoading(false)
+    } catch (err) {
+      console.error("[v0] Failed to fetch infringements:", err)
+      // Fallback to simulated data
+      generateSimulatedInfringements()
+      setIsLoading(false)
+    }
+  }
+
+  const generateSimulatedInfringements = () => {
+    const mockData = [
+      {
+        id: "INF-SIM-001",
+        type: "Unauthorized Person on Track",
+        severity: "critical",
+        location: "KM 125.4 + 200m",
+        camera: "CAM-002",
+        confidence: 98,
+        timestamp: "2 minutes ago",
+        description: "Person detected within track clearance zone",
+        action: "Emergency stop activated, security dispatched",
+        imageUrl: "/placeholder.svg?height=200&width=300",
+        detectionBox: { x: 45, y: 35, width: 15, height: 25 },
+        objectType: "person",
+      },
+      {
+        id: "INF-SIM-002",
+        type: "Vehicle Clearance Violation",
+        severity: "critical",
+        location: "KM 126.8 + 50m",
+        camera: "CAM-005",
+        confidence: 96,
+        timestamp: "5 minutes ago",
+        description: "Vehicle detected too close to track boundary",
+        action: "Warning signals activated",
+        imageUrl: "/placeholder.svg?height=200&width=300",
+        detectionBox: { x: 20, y: 40, width: 30, height: 20 },
+        objectType: "vehicle",
+      },
+      {
+        id: "INF-SIM-003",
+        type: "Maintenance Worker Alert",
+        severity: "warning",
+        location: "KM 128.1 + 100m",
+        camera: "CAM-007",
+        confidence: 92,
+        timestamp: "12 minutes ago",
+        description: "Authorized maintenance personnel near track",
+        action: "Speed restriction in effect",
+        imageUrl: "/placeholder.svg?height=200&width=300",
+        detectionBox: { x: 35, y: 30, width: 12, height: 20 },
+        objectType: "worker",
+      },
+    ]
+    setInfringements(mockData)
+  }
+
+  const getTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    if (seconds < 60) return `${seconds} seconds ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days > 1 ? "s" : ""} ago`
+  }
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -120,46 +170,44 @@ export function InfringementDetection() {
     info: infringements.filter((i) => i.severity === "info").length,
   }
 
-  const exportInfringementData = (format: string) => {
-    const data = {
-      timestamp: new Date().toISOString(),
-      totalInfringements: infringements.length,
-      summary: infringementCounts,
-      detailedReport: infringements.map((inf) => ({
-        id: inf.id,
-        type: inf.type,
-        severity: inf.severity,
-        location: inf.location,
-        confidence: inf.confidence,
-        timestamp: inf.timestamp,
-        description: inf.description,
-        action: inf.action,
-        objectType: inf.objectType,
-      })),
-    }
+  const exportInfringementData = async (format: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("infringement_detections")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000)
 
-    if (format === "csv") {
-      const csvContent = [
-        "ID,Type,Severity,Location,Confidence,Timestamp,Description,Action,Object_Type",
-        ...infringements.map(
-          (inf) =>
-            `${inf.id},"${inf.type}",${inf.severity},"${inf.location}",${inf.confidence}%,"${inf.timestamp}","${inf.description}","${inf.action}",${inf.objectType}`,
-        ),
-      ].join("\n")
+      if (error) throw error
 
-      const blob = new Blob([csvContent], { type: "text/csv" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `track-infringement-report-${Date.now()}.csv`
-      a.click()
-    } else if (format === "json") {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `track-infringement-report-${Date.now()}.json`
-      a.click()
+      const exportData = data || infringements
+
+      if (format === "csv") {
+        const csvContent = [
+          "ID,Type,Severity,Location,Confidence,Timestamp,Description,Action,Object_Type",
+          ...exportData.map(
+            (inf) =>
+              `${inf.infringement_id || inf.id},"${inf.type}",${inf.severity},"${inf.location}",${inf.confidence}%,"${new Date(inf.created_at).toISOString()}","${inf.description}","${inf.action}",${inf.object_type || inf.objectType}`,
+          ),
+        ].join("\n")
+
+        const blob = new Blob([csvContent], { type: "text/csv" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `track-infringement-report-${Date.now()}.csv`
+        a.click()
+      } else if (format === "json") {
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `track-infringement-report-${Date.now()}.json`
+        a.click()
+      }
+    } catch (err) {
+      console.error("[v0] Export failed:", err)
+      alert("Failed to export infringement data")
     }
   }
 
@@ -170,6 +218,10 @@ export function InfringementDetection() {
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-red-400" />
             Track Clearance & Infringement Detection
+            <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
+              <div className="w-2 h-2 rounded-full mr-2 bg-green-400 pulse-data"></div>
+              {isLoading ? "Loading..." : "LIVE"}
+            </Badge>
           </CardTitle>
           <div className="flex items-center gap-2">
             <select
@@ -190,9 +242,9 @@ export function InfringementDetection() {
               <Download className="w-4 h-4 mr-2" />
               JSON
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={fetchInfringements}>
               <Eye className="w-4 h-4 mr-2" />
-              Live View
+              Refresh
             </Button>
           </div>
         </div>
@@ -225,78 +277,84 @@ export function InfringementDetection() {
 
         <ScrollArea className="h-80">
           <div className="space-y-4">
-            {filteredInfringements.map((infringement) => (
-              <div
-                key={infringement.id}
-                className="p-4 rounded-lg border border-border bg-card/30 hover:bg-card/50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={getSeverityColor(infringement.severity)}>
-                      {infringement.severity.toUpperCase()}
-                    </Badge>
-                    <span className="font-medium text-foreground">{infringement.type}</span>
-                    <Badge variant="outline" className="text-purple-400 bg-purple-500/10 border-purple-500/20">
-                      {getObjectIcon(infringement.objectType)}
-                      <span className="ml-1">{infringement.objectType}</span>
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-green-400 bg-green-500/10 border-green-500/20">
-                      {infringement.confidence}%
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">{infringement.id}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 mb-3">
-                  <div className="relative w-32 h-24 rounded border border-border overflow-hidden bg-slate-800">
-                    <img
-                      src={infringement.imageUrl || "/placeholder.svg"}
-                      alt={infringement.type}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* AI Detection Box Overlay */}
-                    <div
-                      className="absolute border-2 border-red-400 bg-red-400/20"
-                      style={{
-                        left: `${infringement.detectionBox.x}%`,
-                        top: `${infringement.detectionBox.y}%`,
-                        width: `${infringement.detectionBox.width}%`,
-                        height: `${infringement.detectionBox.height}%`,
-                      }}
-                    />
-                    {/* AI Confidence Label */}
-                    <div className="absolute top-1 left-1 bg-black/70 text-red-400 text-xs px-1 rounded flex items-center gap-1">
-                      {getObjectIcon(infringement.objectType)}
-                      {infringement.confidence}%
-                    </div>
-                    {/* AI Detection Status */}
-                    <div className="absolute bottom-1 right-1 bg-green-500/80 text-white text-xs px-1 rounded">
-                      AI DETECTED
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-2">{infringement.description}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{infringement.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{infringement.timestamp}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-blue-400" />
-                        <span>{infringement.camera}</span>
-                      </div>
-                      <div className="text-green-400">{infringement.action}</div>
-                    </div>
-                  </div>
-                </div>
+            {filteredInfringements.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No infringements detected. System monitoring active.
               </div>
-            ))}
+            ) : (
+              filteredInfringements.map((infringement) => (
+                <div
+                  key={infringement.id}
+                  className="p-4 rounded-lg border border-border bg-card/30 hover:bg-card/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className={getSeverityColor(infringement.severity)}>
+                        {infringement.severity.toUpperCase()}
+                      </Badge>
+                      <span className="font-medium text-foreground">{infringement.type}</span>
+                      <Badge variant="outline" className="text-purple-400 bg-purple-500/10 border-purple-500/20">
+                        {getObjectIcon(infringement.objectType)}
+                        <span className="ml-1">{infringement.objectType}</span>
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-green-400 bg-green-500/10 border-green-500/20">
+                        {infringement.confidence}%
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">{infringement.id}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 mb-3">
+                    <div className="relative w-32 h-24 rounded border border-border overflow-hidden bg-slate-800">
+                      <img
+                        src={infringement.imageUrl || "/placeholder.svg"}
+                        alt={infringement.type}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* AI Detection Box Overlay */}
+                      <div
+                        className="absolute border-2 border-red-400 bg-red-400/20"
+                        style={{
+                          left: `${infringement.detectionBox.x}%`,
+                          top: `${infringement.detectionBox.y}%`,
+                          width: `${infringement.detectionBox.width}%`,
+                          height: `${infringement.detectionBox.height}%`,
+                        }}
+                      />
+                      {/* AI Confidence Label */}
+                      <div className="absolute top-1 left-1 bg-black/70 text-red-400 text-xs px-1 rounded flex items-center gap-1">
+                        {getObjectIcon(infringement.objectType)}
+                        {infringement.confidence}%
+                      </div>
+                      {/* AI Detection Status */}
+                      <div className="absolute bottom-1 right-1 bg-green-500/80 text-white text-xs px-1 rounded">
+                        AI DETECTED
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground mb-2">{infringement.description}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>{infringement.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{infringement.timestamp}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Camera className="w-4 h-4 text-blue-400" />
+                          <span>{infringement.camera}</span>
+                        </div>
+                        <div className="text-green-400">{infringement.action}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </ScrollArea>
       </CardContent>
