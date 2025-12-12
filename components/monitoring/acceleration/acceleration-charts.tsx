@@ -6,31 +6,51 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { BarChart3, Pause, RotateCcw } from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/client"
 
-const generateSimulatedData = () => ({
-  vertical: (Math.random() - 0.5) * 0.02,
-  lateral: (Math.random() - 0.5) * 0.015,
-  longitudinal: (Math.random() - 0.5) * 0.01,
-})
+const VIB_URL = "https://consideration-bathrooms-llp-translated.trycloudflare.com/vibration"
 
 export function AccelerationCharts() {
   const [data, setData] = useState<any[]>([])
   const [paused, setPaused] = useState(false)
+  const [isLive, setIsLive] = useState(false)
+  const supabase = createBrowserClient()
 
   useEffect(() => {
     if (paused) return
 
-    const interval = setInterval(() => {
-      const dataPoint = generateSimulatedData()
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(VIB_URL, { cache: "no-store" })
+        const json = await res.json()
 
-      const time = new Date().toLocaleTimeString("en-IN", {
-        hour12: false,
-        minute: "2-digit",
-        second: "2-digit",
-      })
+        const time = new Date().toLocaleTimeString("en-IN", {
+          hour12: false,
+          minute: "2-digit",
+          second: "2-digit",
+        })
 
-      const newPoint = { time, ...dataPoint }
-      setData((prev) => [...prev.slice(-59), newPoint])
+        const vertical = json.accel_filtered_m_s2?.vertical ?? 0
+        const lateral = json.accel_filtered_m_s2?.lateral ?? 0
+        const longitudinal = json.accel_filtered_m_s2?.longitudinal ?? 0
+
+        const newPoint = { time, vertical, lateral, longitudinal }
+        setData((prev) => [...prev.slice(-59), newPoint])
+        setIsLive(true)
+
+        // Save to Supabase
+        await supabase.from("acceleration_data").insert({
+          vertical_accel: vertical,
+          lateral_accel: lateral,
+          longitudinal_accel: longitudinal,
+          rms_vibration: json.metrics?.rms_vibration_mm_s ?? 0,
+          peak_vibration: json.metrics?.peak_vibration_mm_s ?? 0,
+          ride_quality_index: json.metrics?.rqi ?? 0,
+        })
+      } catch {
+        // Silent fallback - no error logging
+        setIsLive(false)
+      }
     }, 1000)
 
     return () => clearInterval(interval)
@@ -45,7 +65,11 @@ export function AccelerationCharts() {
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-400" />
             Real-time Acceleration
-            <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">Simulated</span>
+            <span
+              className={`text-xs px-2 py-1 rounded ${isLive ? "text-green-400 bg-green-500/10" : "text-yellow-400 bg-yellow-500/10"}`}
+            >
+              {isLive ? "Live" : "Connecting..."}
+            </span>
           </CardTitle>
 
           <div className="flex items-center gap-2">

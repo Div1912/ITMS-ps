@@ -1,7 +1,6 @@
 import { TrackGeometryHeader } from "@/components/monitoring/track-geometry/track-geometry-header"
 import { GeometryMetrics } from "@/components/monitoring/track-geometry/geometry-metrics"
 import { DeviationCharts } from "@/components/monitoring/track-geometry/deviation-charts"
-import { ComplianceStatus } from "@/components/monitoring/track-geometry/compliance-status"
 import { SensorStatus } from "@/components/monitoring/track-geometry/sensor-status"
 
 export default function TrackGeometryPage() {
@@ -15,7 +14,6 @@ export default function TrackGeometryPage() {
             <DeviationCharts />
           </div>
           <div className="space-y-6">
-            <ComplianceStatus />
             <SensorStatus />
           </div>
         </div>

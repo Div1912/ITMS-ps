@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { VideoRecordingHeader } from "@/components/monitoring/video-recording/video-recording-header"
 import { RecordingControls } from "@/components/monitoring/video-recording/recording-controls"
+import { SavedRecordingsViewer } from "@/components/monitoring/video-recording/saved-recordings-viewer"
 import { StorageManagement } from "@/components/monitoring/video-recording/storage-management"
 import { RecordingScheduler } from "@/components/monitoring/video-recording/recording-scheduler"
 import { VideoArchive } from "@/components/monitoring/video-recording/video-archive"
@@ -14,6 +15,10 @@ export default function VideoRecordingPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <Suspense fallback={<div>Loading recording controls...</div>}>
           <RecordingControls />
+        </Suspense>
+
+        <Suspense fallback={<div>Loading saved recordings...</div>}>
+          <SavedRecordingsViewer />
         </Suspense>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

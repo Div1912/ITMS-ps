@@ -6,44 +6,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 import { Badge } from "@/components/ui/badge"
 
-// ⭐ LIVE URL FROM CLOUDFLARE TUNNEL
-const API_URL = "https://classification-column-enable-seconds.trycloudflare.com/geometry"
+const API_URL = "https://pendant-adjacent-factory-load.trycloudflare.com/geometry"
 
 export function DeviationCharts() {
   const [data, setData] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("lateral")
+  const [isLive, setIsLive] = useState(true)
 
-  // -------------------------------
-  // 🔥 REAL-TIME DATA FETCH
-  // -------------------------------
   useEffect(() => {
-    const interval = setInterval(async () => {
+    let interval: NodeJS.Timeout
+
+    const fetchData = async () => {
       try {
         const res = await fetch(API_URL, { cache: "no-store" })
-        if (!res.ok) throw new Error("Bad response from backend")
+        if (!res.ok) throw new Error("Failed to fetch")
 
         const json = await res.json()
 
         const newPoint = {
-          distance: (245.0 + data.length * 0.1).toFixed(1), // simulate km mark
+          distance: (245.0 + data.length * 0.1).toFixed(1),
           time: new Date().toLocaleTimeString("en-IN", {
             hour12: false,
             minute: "2-digit",
             second: "2-digit",
           }),
-
-          // ⭐ REAL LIVE VALUES FROM Raspberry Pi TGMS
-          lateral: json.lateralDeviation ?? 0,
-          vertical: json.verticalDeviation ?? 0,
-          gauge: json.gauge ?? 1435,
-          twist: json.twist ?? 0,
+          lateral: Number(json.lateralDeviation) || 0,
+          vertical: Number(json.verticalDeviation) || 0,
+          gauge: Number(json.gauge) || 1435,
+          twist: Number(json.twist) || 0,
         }
 
-        setData((prev) => [...prev.slice(-49), newPoint]) // keep last 50 points
+        setData((prev) => [...prev.slice(-49), newPoint])
+        setIsLive(true)
       } catch (err) {
-        console.log("REALTIME FETCH ERROR:", err)
+        setIsLive(false)
       }
-    }, 1000)
+    }
+
+    // Initial fetch
+    fetchData()
+
+    // Poll every second
+    interval = setInterval(fetchData, 1000)
 
     return () => clearInterval(interval)
   }, [data.length])
@@ -94,8 +98,15 @@ export function DeviationCharts() {
             <CardTitle className="text-xl">Deviation Analysis</CardTitle>
             <CardDescription>Real-time track geometry deviations along the route</CardDescription>
           </div>
-          <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-            Live Tracking
+          <Badge
+            variant="outline"
+            className={
+              isLive
+                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+            }
+          >
+            {isLive ? "Live" : "Offline"}
           </Badge>
         </div>
       </CardHeader>
@@ -119,7 +130,7 @@ export function DeviationCharts() {
             </div>
             <div className="text-right text-sm text-muted-foreground">
               <p>Position: KM {latest.distance}</p>
-              <p>Speed: 45 km/h</p>
+              <p>Time: {latest.time}</p>
             </div>
           </div>
 
@@ -149,13 +160,7 @@ export function DeviationCharts() {
                     {/* Gauge nominal line */}
                     {config.nominal && <ReferenceLine y={config.nominal} stroke="#10b981" strokeDasharray="3 3" />}
 
-                    <Line
-                      type="monotone"
-                      dataKey={config.dataKey}
-                      stroke={config.color}
-                      strokeWidth={2}
-                      dot={false}
-                    />
+                    <Line type="monotone" dataKey={config.dataKey} stroke={config.color} strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

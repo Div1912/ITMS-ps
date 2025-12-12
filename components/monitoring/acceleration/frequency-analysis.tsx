@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Radio, Settings, Download } from "lucide-react"
 
-const VIB_URL = "https://axis-baking-courier-actions.trycloudflare.com/vibration"
+const VIB_URL = "https://consideration-bathrooms-llp-translated.trycloudflare.com/vibration"
 
 export function FrequencyAnalysis() {
   const [frequencyData, setFrequencyData] = useState<any[]>([])
@@ -20,20 +20,18 @@ export function FrequencyAnalysis() {
         const res = await fetch(VIB_URL, { cache: "no-store" })
         const json = await res.json()
 
-        // Generate frequency spectrum from acceleration data
         const accel = [
           json.accel_filtered_m_s2?.vertical ?? 0,
           json.accel_filtered_m_s2?.lateral ?? 0,
           json.accel_filtered_m_s2?.longitudinal ?? 0,
         ]
 
-        // Simulate FFT analysis (in production, use proper FFT library)
         const spectrum = generateFrequencySpectrum(accel)
         setFrequencyData(spectrum.data)
         setDominantFreqs(spectrum.dominant)
         setStats(spectrum.stats)
-      } catch (err) {
-        console.error("Frequency analysis error:", err)
+      } catch {
+        // Silent fallback
       }
     }, 2000)
 

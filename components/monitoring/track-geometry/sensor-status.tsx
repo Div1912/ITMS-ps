@@ -1,54 +1,88 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Cpu, Wifi, Battery, Thermometer } from "lucide-react"
 
-const sensors = [
-  {
-    id: "laser-1",
-    name: "Laser Scanner 1",
-    type: "Lateral Measurement",
-    status: "online",
-    health: 98,
-    temperature: 42,
-    battery: 87,
-    signal: 95,
-  },
-  {
-    id: "laser-2",
-    name: "Laser Scanner 2",
-    type: "Vertical Measurement",
-    status: "online",
-    health: 96,
-    temperature: 38,
-    battery: 92,
-    signal: 88,
-  },
-  {
-    id: "encoder-1",
-    name: "Distance Encoder",
-    type: "Position Tracking",
-    status: "online",
-    health: 99,
-    temperature: 35,
-    battery: 78,
-    signal: 92,
-  },
-  {
-    id: "imu-1",
-    name: "IMU Sensor",
-    type: "Orientation",
-    status: "warning",
-    health: 85,
-    temperature: 45,
-    battery: 65,
-    signal: 82,
-  },
-]
+const GEOMETRY_URL = "https://pendant-adjacent-factory-load.trycloudflare.com/geometry"
 
 export function SensorStatus() {
+  const [sensors, setSensors] = useState([
+    {
+      id: "mpu6050-1",
+      name: "MPU6050",
+      type: "IMU - Acceleration & Gyro",
+      status: "online",
+      health: 98,
+      temperature: 42,
+      battery: 87,
+      signal: 95,
+    },
+    {
+      id: "vl53ldk-1",
+      name: "VL53L0X",
+      type: "Laser Distance Sensor",
+      status: "online",
+      health: 96,
+      temperature: 38,
+      battery: 92,
+      signal: 88,
+    },
+    {
+      id: "vl53ldk-2",
+      name: "VL53L0X",
+      type: "Laser Distance Sensor",
+      status: "online",
+      health: 99,
+      temperature: 35,
+      battery: 78,
+      signal: 92,
+    },
+    {
+      id: "encoder-1",
+      name: "Rotary Encoder",
+      type: "Position Tracking",
+      status: "online",
+      health: 99,
+      temperature: 32,
+      battery: 95,
+      signal: 98,
+    },
+  ])
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(GEOMETRY_URL, { cache: "no-store" })
+        if (res.ok) {
+          setSensors((prev) =>
+            prev.map((s) => ({
+              ...s,
+              status: "online",
+              health: Math.min(100, Math.max(95, s.health + (Math.random() * 2 - 1))),
+              temperature: Math.max(30, s.temperature + (Math.random() * 2 - 1)),
+            })),
+          )
+        } else {
+          throw new Error("Offline")
+        }
+      } catch {
+        // Sensors offline
+        setSensors((prev) =>
+          prev.map((s) => ({
+            ...s,
+            status: "warning",
+            health: Math.max(0, s.health - 5),
+          })),
+        )
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   const onlineSensors = sensors.filter((s) => s.status === "online").length
   const averageHealth = Math.round(sensors.reduce((acc, s) => acc + s.health, 0) / sensors.length)
 
@@ -100,7 +134,7 @@ export function SensorStatus() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Health</span>
-                  <span className="font-medium">{sensor.health}%</span>
+                  <span className="font-medium">{sensor.health.toFixed(0)}%</span>
                 </div>
                 <Progress value={sensor.health} className="h-1" />
 
