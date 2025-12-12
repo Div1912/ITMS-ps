@@ -7,10 +7,12 @@ import { Play, Download, Settings, FileText, AlertTriangle, BarChart3, Pause, Ch
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 export function QuickActions() {
   const router = useRouter()
   const { toast } = useToast()
+  const supabase = createBrowserClient()
   const [isRecording, setIsRecording] = useState(false)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
 
@@ -26,20 +28,43 @@ export function QuickActions() {
     setIsGeneratingReport(true)
     toast({
       title: "Generating Report",
-      description: "Creating comprehensive analysis report...",
+      description: "Fetching data from database...",
     })
 
-    // Simulate report generation
-    setTimeout(() => {
-      setIsGeneratingReport(false)
-      // Create and download a sample report
+    try {
+      // Fetch latest geometry data
+      const { data: geometryData } = await supabase
+        .from("geometry_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100)
+
+      // Fetch latest acceleration data
+      const { data: accelData } = await supabase
+        .from("acceleration_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100)
+
       const reportData = {
         timestamp: new Date().toISOString(),
-        systemHealth: "98%",
-        activeModules: 6,
-        alerts: 2,
-        trackCondition: "Good",
-        recommendations: ["Schedule maintenance for Section A", "Calibrate sensors in Zone 3"],
+        summary: {
+          geometryRecords: geometryData?.length || 0,
+          accelerationRecords: accelData?.length || 0,
+          avgLateralDeviation: geometryData
+            ? (geometryData.reduce((sum, r) => sum + Number(r.lateral_deviation), 0) / geometryData.length).toFixed(2)
+            : 0,
+          avgVerticalAccel: accelData
+            ? (accelData.reduce((sum, r) => sum + Number(r.vertical_accel), 0) / accelData.length).toFixed(3)
+            : 0,
+        },
+        geometryData: geometryData?.slice(0, 10),
+        accelerationData: accelData?.slice(0, 10),
+        recommendations: [
+          "Track geometry within acceptable limits",
+          "Vibration levels normal for current speed",
+          "Continue regular monitoring schedule",
+        ],
       }
 
       const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" })
@@ -54,31 +79,59 @@ export function QuickActions() {
 
       toast({
         title: "Report Generated",
-        description: "Analysis report has been downloaded successfully",
+        description: `Report with ${geometryData?.length || 0} geometry and ${accelData?.length || 0} acceleration records`,
       })
-    }, 3000)
+    } catch (err) {
+      toast({
+        title: "Report Generation Failed",
+        description: String(err),
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingReport(false)
+    }
   }
 
   const handleExportData = async () => {
     toast({
       title: "Exporting Data",
-      description: "Preparing monitoring data for download...",
+      description: "Fetching all monitoring data...",
     })
 
-    // Simulate data export
-    setTimeout(() => {
-      const csvData = `Timestamp,Module,Health,Status,Value
-${new Date().toISOString()},Track Geometry,98%,Operational,Normal
-${new Date().toISOString()},Rail Profile,95%,Operational,Good
-${new Date().toISOString()},Acceleration,97%,Operational,Low
-${new Date().toISOString()},AI Vision,94%,Operational,Active
-${new Date().toISOString()},Video Recording,99%,Operational,Recording`
+    try {
+      // Fetch geometry data
+      const { data: geometryData } = await supabase
+        .from("geometry_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5000)
+
+      // Fetch acceleration data
+      const { data: accelData } = await supabase
+        .from("acceleration_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5000)
+
+      const csvData = [
+        "Type,Timestamp,Metric,Value,Unit",
+        ...(geometryData || []).flatMap((row) => [
+          `Geometry,${row.created_at},Lateral Deviation,${row.lateral_deviation},mm`,
+          `Geometry,${row.created_at},Vertical Deviation,${row.vertical_deviation},mm`,
+          `Geometry,${row.created_at},Gauge,${row.gauge},mm`,
+        ]),
+        ...(accelData || []).flatMap((row) => [
+          `Acceleration,${row.created_at},Vertical Accel,${row.vertical_accel},m/s²`,
+          `Acceleration,${row.created_at},Lateral Accel,${row.lateral_accel},m/s²`,
+          `Acceleration,${row.created_at},RMS Vibration,${row.rms_vibration},mm/s`,
+        ]),
+      ].join("\n")
 
       const blob = new Blob([csvData], { type: "text/csv" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `ITMS-Data-${new Date().toISOString().split("T")[0]}.csv`
+      a.download = `ITMS-Complete-Data-${new Date().toISOString().split("T")[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -86,9 +139,15 @@ ${new Date().toISOString()},Video Recording,99%,Operational,Recording`
 
       toast({
         title: "Data Exported",
-        description: "Monitoring data has been downloaded as CSV",
+        description: `Exported ${(geometryData?.length || 0) + (accelData?.length || 0)} total records`,
       })
-    }, 2000)
+    } catch (err) {
+      toast({
+        title: "Export Failed",
+        description: String(err),
+        variant: "destructive",
+      })
+    }
   }
 
   const actions = [

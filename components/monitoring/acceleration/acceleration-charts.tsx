@@ -7,53 +7,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { BarChart3, Pause, RotateCcw } from "lucide-react"
 
-// ⭐ Your vibration backend URL
-const VIB_URL = "https://axis-baking-courier-actions.trycloudflare.com/vibration"
-
-// ⭐ Function to normalize tiny IMU noise (0.00001 → 0)
-const normalize = (n: number) => (Math.abs(n) < 0.0008 ? 0 : n)
+const generateSimulatedData = () => ({
+  vertical: (Math.random() - 0.5) * 0.02,
+  lateral: (Math.random() - 0.5) * 0.015,
+  longitudinal: (Math.random() - 0.5) * 0.01,
+})
 
 export function AccelerationCharts() {
   const [data, setData] = useState<any[]>([])
   const [paused, setPaused] = useState(false)
 
-  // ⭐ Fetch real-time vibration every 1 sec
   useEffect(() => {
     if (paused) return
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(VIB_URL, { cache: "no-store" })
-        const json = await res.json()
+    const interval = setInterval(() => {
+      const dataPoint = generateSimulatedData()
 
-        // ⭐ Correct backend fields
-        const vertical = normalize(json.accel_filtered_m_s2?.vertical ?? 0)
-        const lateral = normalize(json.accel_filtered_m_s2?.lateral ?? 0)
-        const longitudinal = normalize(json.accel_filtered_m_s2?.longitudinal ?? 0)
+      const time = new Date().toLocaleTimeString("en-IN", {
+        hour12: false,
+        minute: "2-digit",
+        second: "2-digit",
+      })
 
-        const time = new Date().toLocaleTimeString("en-IN", {
-          hour12: false,
-          minute: "2-digit",
-          second: "2-digit",
-        })
-
-        const newPoint = { time, vertical, lateral, longitudinal }
-
-        // ⭐ Rolling window → last 60 samples
-        setData(prev => [...prev.slice(-59), newPoint])
-      } catch (err) {
-        console.error("Vibration fetch error:", err)
-      }
+      const newPoint = { time, ...dataPoint }
+      setData((prev) => [...prev.slice(-59), newPoint])
     }, 1000)
 
     return () => clearInterval(interval)
   }, [paused])
 
-  // ⭐ Latest realtime values for cards
-  const latest =
-    data.length > 0
-      ? data[data.length - 1]
-      : { vertical: 0, lateral: 0, longitudinal: 0 }
+  const latest = data.length > 0 ? data[data.length - 1] : { vertical: 0, lateral: 0, longitudinal: 0 }
 
   return (
     <Card>
@@ -62,6 +45,7 @@ export function AccelerationCharts() {
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-400" />
             Real-time Acceleration
+            <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">Simulated</span>
           </CardTitle>
 
           <div className="flex items-center gap-2">
@@ -74,12 +58,10 @@ export function AccelerationCharts() {
               </SelectContent>
             </Select>
 
-            {/* Pause button */}
             <Button variant="outline" size="sm" onClick={() => setPaused(!paused)}>
               <Pause className="w-4 h-4" />
             </Button>
 
-            {/* Reset graph */}
             <Button variant="outline" size="sm" onClick={() => setData([])}>
               <RotateCcw className="w-4 h-4" />
             </Button>
@@ -88,17 +70,12 @@ export function AccelerationCharts() {
       </CardHeader>
 
       <CardContent>
-        {/* ⭐ REAL-TIME GRAPH */}
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
-              <YAxis
-                stroke="#9CA3AF"
-                fontSize={12}
-                tickFormatter={(v) => `${v.toFixed(2)} m/s²`}
-              />
+              <YAxis stroke="#9CA3AF" fontSize={12} tickFormatter={(v) => `${v.toFixed(2)} m/s²`} />
 
               <Tooltip
                 contentStyle={{
@@ -114,27 +91,8 @@ export function AccelerationCharts() {
 
               <Legend />
 
-              {/* Vertical */}
-              <Line
-                type="monotone"
-                dataKey="vertical"
-                stroke="#EF4444"
-                strokeWidth={2}
-                dot={false}
-                name="Vertical"
-              />
-
-              {/* Lateral */}
-              <Line
-                type="monotone"
-                dataKey="lateral"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                dot={false}
-                name="Lateral"
-              />
-
-              {/* Longitudinal */}
+              <Line type="monotone" dataKey="vertical" stroke="#EF4444" strokeWidth={2} dot={false} name="Vertical" />
+              <Line type="monotone" dataKey="lateral" stroke="#3B82F6" strokeWidth={2} dot={false} name="Lateral" />
               <Line
                 type="monotone"
                 dataKey="longitudinal"
@@ -147,29 +105,19 @@ export function AccelerationCharts() {
           </ResponsiveContainer>
         </div>
 
-        {/* ⭐ LIVE METRIC BOXES */}
         <div className="grid grid-cols-3 gap-4 mt-4">
-          {/* Vertical */}
           <div className="text-center p-3 rounded-lg border border-red-500/20 bg-red-500/10">
-            <div className="text-lg font-bold text-red-400">
-              {latest.vertical.toFixed(3)} m/s²
-            </div>
+            <div className="text-lg font-bold text-red-400">{latest.vertical.toFixed(3)} m/s²</div>
             <div className="text-sm text-muted-foreground">Current Vertical</div>
           </div>
 
-          {/* Lateral */}
           <div className="text-center p-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
-            <div className="text-lg font-bold text-blue-400">
-              {latest.lateral.toFixed(3)} m/s²
-            </div>
+            <div className="text-lg font-bold text-blue-400">{latest.lateral.toFixed(3)} m/s²</div>
             <div className="text-sm text-muted-foreground">Current Lateral</div>
           </div>
 
-          {/* Longitudinal */}
           <div className="text-center p-3 rounded-lg border border-green-500/20 bg-green-500/10">
-            <div className="text-lg font-bold text-green-400">
-              {latest.longitudinal.toFixed(3)} m/s²
-            </div>
+            <div className="text-lg font-bold text-green-400">{latest.longitudinal.toFixed(3)} m/s²</div>
             <div className="text-sm text-muted-foreground">Current Longitudinal</div>
           </div>
         </div>

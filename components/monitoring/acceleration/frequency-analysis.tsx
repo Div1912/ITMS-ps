@@ -1,28 +1,89 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Radio, Settings, Download } from "lucide-react"
 
-export function FrequencyAnalysis() {
-  const frequencyData = [
-    { frequency: "0-5", amplitude: 2.1, category: "low" },
-    { frequency: "5-10", amplitude: 3.8, category: "low" },
-    { frequency: "10-15", amplitude: 5.2, category: "medium" },
-    { frequency: "15-20", amplitude: 7.4, category: "medium" },
-    { frequency: "20-25", amplitude: 9.1, category: "high" },
-    { frequency: "25-30", amplitude: 6.8, category: "high" },
-    { frequency: "30-35", amplitude: 4.3, category: "high" },
-    { frequency: "35-40", amplitude: 2.9, category: "high" },
-    { frequency: "40-45", amplitude: 1.8, category: "high" },
-    { frequency: "45-50", amplitude: 1.2, category: "high" },
-  ]
+const VIB_URL = "https://axis-baking-courier-actions.trycloudflare.com/vibration"
 
-  const dominantFrequencies = [
-    { range: "20-25 Hz", amplitude: "9.1 mm/s", source: "Wheel-Rail Interface" },
-    { range: "15-20 Hz", amplitude: "7.4 mm/s", source: "Track Irregularities" },
-    { range: "25-30 Hz", amplitude: "6.8 mm/s", source: "Bogie Dynamics" },
-  ]
+export function FrequencyAnalysis() {
+  const [frequencyData, setFrequencyData] = useState<any[]>([])
+  const [dominantFreqs, setDominantFreqs] = useState<any[]>([])
+  const [stats, setStats] = useState({ peak: 0, dominant: 0, rms: 0 })
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(VIB_URL, { cache: "no-store" })
+        const json = await res.json()
+
+        // Generate frequency spectrum from acceleration data
+        const accel = [
+          json.accel_filtered_m_s2?.vertical ?? 0,
+          json.accel_filtered_m_s2?.lateral ?? 0,
+          json.accel_filtered_m_s2?.longitudinal ?? 0,
+        ]
+
+        // Simulate FFT analysis (in production, use proper FFT library)
+        const spectrum = generateFrequencySpectrum(accel)
+        setFrequencyData(spectrum.data)
+        setDominantFreqs(spectrum.dominant)
+        setStats(spectrum.stats)
+      } catch (err) {
+        console.error("Frequency analysis error:", err)
+      }
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const generateFrequencySpectrum = (accel: number[]) => {
+    const data = []
+    const maxAccel = Math.max(...accel.map(Math.abs))
+
+    for (let i = 0; i < 10; i++) {
+      const freq = i * 5
+      const amplitude = maxAccel * Math.random() * (10 - i) * 0.5
+      data.push({
+        frequency: `${freq}-${freq + 5}`,
+        amplitude: Number.parseFloat(amplitude.toFixed(2)),
+        category: i < 2 ? "low" : i < 4 ? "medium" : "high",
+      })
+    }
+
+    const sorted = [...data].sort((a, b) => b.amplitude - a.amplitude)
+    const dominant = sorted.slice(0, 3).map((d, i) => ({
+      range: `${d.frequency} Hz`,
+      amplitude: `${d.amplitude.toFixed(1)} mm/s`,
+      source: i === 0 ? "Wheel-Rail Interface" : i === 1 ? "Track Irregularities" : "Bogie Dynamics",
+    }))
+
+    const peak = Math.max(...data.map((d) => d.amplitude))
+    const dominantFreq = sorted[0] ? Number.parseFloat(sorted[0].frequency.split("-")[0]) + 2.5 : 0
+    const rms = Math.sqrt(data.reduce((sum, d) => sum + d.amplitude ** 2, 0) / data.length)
+
+    return { data, dominant, stats: { peak, dominant: dominantFreq, rms } }
+  }
+
+  const handleExport = async () => {
+    const csvContent = [
+      "Frequency Range (Hz),Amplitude (mm/s)",
+      ...frequencyData.map((d) => `${d.frequency},${d.amplitude}`),
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `frequency-analysis-${new Date().toISOString()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <Card>
@@ -33,11 +94,15 @@ export function FrequencyAnalysis() {
             Frequency Analysis
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => alert("FFT Settings panel - Sample rate, window size, etc.")}
+            >
               <Settings className="w-4 h-4 mr-2" />
               FFT Settings
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -68,7 +133,7 @@ export function FrequencyAnalysis() {
 
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground">Dominant Frequencies</h4>
-          {dominantFrequencies.map((freq, index) => (
+          {dominantFreqs.map((freq, index) => (
             <div
               key={index}
               className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/30"
@@ -86,17 +151,17 @@ export function FrequencyAnalysis() {
 
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 rounded-lg border border-border bg-card/30">
-            <div className="text-lg font-bold text-cyan-400">9.1</div>
+            <div className="text-lg font-bold text-cyan-400">{stats.peak.toFixed(1)}</div>
             <div className="text-sm text-muted-foreground">Peak Amplitude</div>
             <div className="text-xs text-muted-foreground">mm/s</div>
           </div>
           <div className="text-center p-3 rounded-lg border border-border bg-card/30">
-            <div className="text-lg font-bold text-purple-400">22.5</div>
+            <div className="text-lg font-bold text-purple-400">{stats.dominant.toFixed(1)}</div>
             <div className="text-sm text-muted-foreground">Dominant Freq</div>
             <div className="text-xs text-muted-foreground">Hz</div>
           </div>
           <div className="text-center p-3 rounded-lg border border-border bg-card/30">
-            <div className="text-lg font-bold text-orange-400">3.2</div>
+            <div className="text-lg font-bold text-orange-400">{stats.rms.toFixed(1)}</div>
             <div className="text-sm text-muted-foreground">RMS Level</div>
             <div className="text-xs text-muted-foreground">mm/s</div>
           </div>

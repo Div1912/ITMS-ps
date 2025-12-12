@@ -4,13 +4,110 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Play, Pause, Download, Settings, MapPin } from "lucide-react"
+import { ArrowLeft, Play, Pause, Download, Settings, MapPin, FileJson, FileSpreadsheet } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function TrackGeometryHeader() {
   const [isRecording, setIsRecording] = useState(true)
   const [selectedSection, setSelectedSection] = useState("section-a")
+  const [isExporting, setIsExporting] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
+
+  const exportToCSV = async () => {
+    try {
+      setIsExporting(true)
+      const { data, error } = await supabase
+        .from("geometry_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000)
+
+      if (error) throw error
+
+      if (!data || data.length === 0) {
+        alert("No data available to export")
+        return
+      }
+
+      // Create CSV content
+      const headers = [
+        "Timestamp",
+        "Lateral Deviation (mm)",
+        "Vertical Deviation (mm)",
+        "Gauge (mm)",
+        "Twist (mm/m)",
+        "Curvature (°)",
+        "Cant (mm)",
+      ]
+      const csvRows = [headers.join(",")]
+
+      data.forEach((row) => {
+        const values = [
+          new Date(row.created_at).toISOString(),
+          row.lateral_deviation,
+          row.vertical_deviation,
+          row.gauge,
+          row.twist,
+          row.curvature,
+          row.cant,
+        ]
+        csvRows.push(values.join(","))
+      })
+
+      const csvContent = csvRows.join("\n")
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", `track_geometry_${new Date().toISOString().slice(0, 10)}.csv`)
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error("[v0] Export failed:", err)
+      alert("Failed to export data")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const exportToJSON = async () => {
+    try {
+      setIsExporting(true)
+      const { data, error } = await supabase
+        .from("geometry_data")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000)
+
+      if (error) throw error
+
+      if (!data || data.length === 0) {
+        alert("No data available to export")
+        return
+      }
+
+      const jsonContent = JSON.stringify(data, null, 2)
+      const blob = new Blob([jsonContent], { type: "application/json" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", `track_geometry_${new Date().toISOString().slice(0, 10)}.json`)
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error("[v0] Export failed:", err)
+      alert("Failed to export data")
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
@@ -59,12 +156,30 @@ export function TrackGeometryHeader() {
               )}
             </Button>
 
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export Data
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isExporting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {isExporting ? "Exporting..." : "Export Data"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToJSON}>
+                  <FileJson className="w-4 h-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => alert("Settings panel coming soon - configure thresholds and alerts here")}
+            >
               <Settings className="w-4 h-4" />
             </Button>
 

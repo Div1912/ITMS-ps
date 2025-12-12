@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Activity, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/client"
 
-// ⭐ Your Cloudflare tunnel for vibration backend
-const VIB_URL = "https://axis-baking-courier-actions.trycloudflare.com/vibration"
+const VIB_URL = "https://consideration-bathrooms-llp-translated.trycloudflare.com/vibration"
 
 export function VibrationMetrics() {
   const [data, setData] = useState<any>(null)
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const supabase = createBrowserClient()
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -20,23 +21,32 @@ export function VibrationMetrics() {
         const json = await res.json()
         setData(json)
         setLastUpdate(new Date())
-      } catch (err) {
-        console.error("Vibration fetch error:", err)
-      }
+
+        const vertical = json.accel_filtered_m_s2?.vertical ?? 0
+        const lateral = json.accel_filtered_m_s2?.lateral ?? 0
+        const longitudinal = json.accel_filtered_m_s2?.longitudinal ?? 0
+        const rmsVib = json.metrics?.rms_vibration_mm_s ?? 0
+        const peakVib = json.metrics?.peak_vibration_mm_s ?? 0
+        const rqi = json.metrics?.rqi ?? 0
+
+        await supabase.from("acceleration_data").insert({
+          vertical_accel: vertical,
+          lateral_accel: lateral,
+          longitudinal_accel: longitudinal,
+          rms_vibration: rmsVib,
+          peak_vibration: peakVib,
+          ride_quality_index: rqi,
+        })
+      } catch {}
     }, 1000)
 
     return () => clearInterval(interval)
   }, [])
 
   if (!data) {
-    return (
-      <Card className="p-6 text-center text-muted-foreground">
-        Connecting to vibration sensors...
-      </Card>
-    )
+    return <Card className="p-6 text-center text-muted-foreground">Connecting to vibration sensors...</Card>
   }
 
-  // Extract values from backend
   const vertical = data.accel_filtered_m_s2?.vertical ?? 0
   const lateral = data.accel_filtered_m_s2?.lateral ?? 0
   const longitudinal = data.accel_filtered_m_s2?.longitudinal ?? 0
@@ -45,7 +55,6 @@ export function VibrationMetrics() {
   const peakVib = data.metrics?.peak_vibration_mm_s ?? 0
   const rqi = data.metrics?.rqi ?? 0
 
-  // Converted list for UI mapping
   const metrics = [
     {
       title: "Vertical Acceleration",
@@ -85,11 +94,8 @@ export function VibrationMetrics() {
     },
   ]
 
-  // Convert to percentage
-  const toPercent = (value: number, limit: number) =>
-    Math.min(100, ((value / limit) * 100))
+  const toPercent = (value: number, limit: number) => Math.min(100, (value / limit) * 100)
 
-  // Color based on severity
   const getStatus = (value: number, limit: number) => {
     const pct = value / limit
     if (pct < 0.6) return "good"
@@ -105,9 +111,12 @@ export function VibrationMetrics() {
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case "up": return <TrendingUp className="w-4 h-4 text-red-400" />
-      case "down": return <TrendingDown className="w-4 h-4 text-green-400" />
-      default: return <Minus className="w-4 h-4 text-muted-foreground" />
+      case "up":
+        return <TrendingUp className="w-4 h-4 text-red-400" />
+      case "down":
+        return <TrendingDown className="w-4 h-4 text-green-400" />
+      default:
+        return <Minus className="w-4 h-4 text-muted-foreground" />
     }
   }
 
@@ -121,9 +130,7 @@ export function VibrationMetrics() {
       </CardHeader>
 
       <CardContent>
-        <p className="text-xs text-muted-foreground mb-3">
-          Last update: {lastUpdate.toLocaleTimeString("en-IN")}
-        </p>
+        <p className="text-xs text-muted-foreground mb-3">Last update: {lastUpdate.toLocaleTimeString("en-IN")}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {metrics.map((m, i) => {
