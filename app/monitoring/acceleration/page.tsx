@@ -1,3 +1,5 @@
+"use client"
+
 import { Suspense } from "react"
 import { AccelerationHeader } from "@/components/monitoring/acceleration/acceleration-header"
 import { VibrationMetrics } from "@/components/monitoring/acceleration/vibration-metrics"
